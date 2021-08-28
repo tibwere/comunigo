@@ -1,0 +1,20 @@
+syntax = "proto3";
+
+option go_package = "gitlab.com/comunigo/greetings/proto";
+
+package proto;
+
+// definizione del servizio 
+service Greeter {
+    rpc SayHello (HelloRequest) returns (HelloReply) {}
+}
+
+// formato del messaggio di richiesta
+message HelloRequest {
+    string name = 1;
+}
+
+// formato del messaggio di risposta
+message HelloReply {
+    string message = 1; 
+}
