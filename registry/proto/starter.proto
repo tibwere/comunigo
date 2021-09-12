@@ -1,0 +1,18 @@
+syntax = "proto3";
+
+option go_package = "gitlab.com/tibwere/comunigo/registry/proto";
+
+package proto;
+
+service Starter {
+    rpc StartComunication(stream Member) returns (Ack){}
+}
+
+message Member {
+    string username = 1;
+    string hostname = 2;
+}
+
+message Ack {
+    
+}

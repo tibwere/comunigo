@@ -1,0 +1,20 @@
+syntax = "proto3";
+
+option go_package = "gitlab.com/tibwere/comunigo/registry/proto";
+
+package proto;
+
+service Registry {
+    rpc Sign(ClientInfo) returns (TypeOfService) {}
+}
+
+message ClientInfo {
+    string Username = 1;
+    string Hostname = 2;
+    uint32 LocalPort = 3;
+}
+
+message TypeOfService {
+    string type = 1; 
+}
+

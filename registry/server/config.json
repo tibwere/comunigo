@@ -1,0 +1,9 @@
+{
+    "hosts" : [
+        "friday", "jarvis"
+    ],
+
+    "tos" : "sequencer",
+
+    "port" : 8080
+}
