@@ -1,4 +1,4 @@
-module gitlab.com/tibwere/comunigo/registry
+module gitlab.com/tibwere/comunigo/registration
 
 go 1.16
 

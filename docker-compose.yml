@@ -1,0 +1,35 @@
+version: "3.9"
+services: 
+  registration-client-1:
+    build: 
+      context: ./registration/
+      dockerfile: Dockerfile.client
+      args:
+        - user=$COMUNIGO_USER_1
+    links: 
+      - registration-server
+  registration-client-2:
+    build: 
+      context: ./registration/
+      dockerfile: Dockerfile.client
+      args:
+        - user=$COMUNIGO_USER_2
+    links: 
+      - registration-server
+  registration-client-3:
+    build: 
+      context: ./registration/
+      dockerfile: Dockerfile.client
+      args:
+        - user=$COMUNIGO_USER_3
+    links: 
+      - registration-server
+  registration-server:
+    build: 
+      context: ./registration/
+      dockerfile: Dockerfile.server
+      args: 
+        - size=$SIZE
+    ports:
+      - "2929:2929"
+    

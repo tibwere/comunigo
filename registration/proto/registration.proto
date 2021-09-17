@@ -1,0 +1,17 @@
+syntax = "proto3";
+
+option go_package = "gitlab.com/tibwere/comunigo/registration/proto";
+
+package proto;
+
+service Registration {
+    rpc Sign(Request) returns (stream Response) {}
+}
+
+message Request {
+    string Username = 1;
+}
+
+message Response {
+    string Username = 1;
+}
