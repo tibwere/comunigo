@@ -1,0 +1,25 @@
+syntax = "proto3";
+
+option go_package = "gitlab.com/tibwere/comunigo/proto";
+
+package proto;
+
+service Registration {
+    rpc Sign(ClientInfo) returns (ChatGroupInfo);
+}
+
+message ClientInfo {
+    string Username = 1;
+    string Hostname = 2;
+}
+
+enum TypeOfService {
+    SEQUENCER = 0;
+    TOTALLY_ORDERED = 1;
+    CAUSALLY_ORDERED = 2;
+}
+
+message ChatGroupInfo {
+    TypeOfService tos = 1;
+    repeated ClientInfo infos = 2;
+}

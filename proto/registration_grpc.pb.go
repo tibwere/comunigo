@@ -18,7 +18,7 @@ const _ = grpc.SupportPackageIsVersion7
 //
 // For semantics around ctx use and closing/ending streaming RPCs, please refer to https://pkg.go.dev/google.golang.org/grpc/?tab=doc#ClientConn.NewStream.
 type RegistrationClient interface {
-	Sign(ctx context.Context, in *Request, opts ...grpc.CallOption) (Registration_SignClient, error)
+	Sign(ctx context.Context, in *ClientInfo, opts ...grpc.CallOption) (*ChatGroupInfo, error)
 }
 
 type registrationClient struct {
@@ -29,43 +29,20 @@ func NewRegistrationClient(cc grpc.ClientConnInterface) RegistrationClient {
 	return &registrationClient{cc}
 }
 
-func (c *registrationClient) Sign(ctx context.Context, in *Request, opts ...grpc.CallOption) (Registration_SignClient, error) {
-	stream, err := c.cc.NewStream(ctx, &Registration_ServiceDesc.Streams[0], "/proto.Registration/Sign", opts...)
+func (c *registrationClient) Sign(ctx context.Context, in *ClientInfo, opts ...grpc.CallOption) (*ChatGroupInfo, error) {
+	out := new(ChatGroupInfo)
+	err := c.cc.Invoke(ctx, "/proto.Registration/Sign", in, out, opts...)
 	if err != nil {
 		return nil, err
 	}
-	x := &registrationSignClient{stream}
-	if err := x.ClientStream.SendMsg(in); err != nil {
-		return nil, err
-	}
-	if err := x.ClientStream.CloseSend(); err != nil {
-		return nil, err
-	}
-	return x, nil
-}
-
-type Registration_SignClient interface {
-	Recv() (*Response, error)
-	grpc.ClientStream
-}
-
-type registrationSignClient struct {
-	grpc.ClientStream
-}
-
-func (x *registrationSignClient) Recv() (*Response, error) {
-	m := new(Response)
-	if err := x.ClientStream.RecvMsg(m); err != nil {
-		return nil, err
-	}
-	return m, nil
+	return out, nil
 }
 
 // RegistrationServer is the server API for Registration service.
 // All implementations must embed UnimplementedRegistrationServer
 // for forward compatibility
 type RegistrationServer interface {
-	Sign(*Request, Registration_SignServer) error
+	Sign(context.Context, *ClientInfo) (*ChatGroupInfo, error)
 	mustEmbedUnimplementedRegistrationServer()
 }
 
@@ -73,8 +50,8 @@ type RegistrationServer interface {
 type UnimplementedRegistrationServer struct {
 }
 
-func (UnimplementedRegistrationServer) Sign(*Request, Registration_SignServer) error {
-	return status.Errorf(codes.Unimplemented, "method Sign not implemented")
+func (UnimplementedRegistrationServer) Sign(context.Context, *ClientInfo) (*ChatGroupInfo, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method Sign not implemented")
 }
 func (UnimplementedRegistrationServer) mustEmbedUnimplementedRegistrationServer() {}
 
@@ -89,25 +66,22 @@ func RegisterRegistrationServer(s grpc.ServiceRegistrar, srv RegistrationServer)
 	s.RegisterService(&Registration_ServiceDesc, srv)
 }
 
-func _Registration_Sign_Handler(srv interface{}, stream grpc.ServerStream) error {
-	m := new(Request)
-	if err := stream.RecvMsg(m); err != nil {
-		return err
+func _Registration_Sign_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(ClientInfo)
+	if err := dec(in); err != nil {
+		return nil, err
 	}
-	return srv.(RegistrationServer).Sign(m, &registrationSignServer{stream})
-}
-
-type Registration_SignServer interface {
-	Send(*Response) error
-	grpc.ServerStream
-}
-
-type registrationSignServer struct {
-	grpc.ServerStream
-}
-
-func (x *registrationSignServer) Send(m *Response) error {
-	return x.ServerStream.SendMsg(m)
+	if interceptor == nil {
+		return srv.(RegistrationServer).Sign(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: "/proto.Registration/Sign",
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(RegistrationServer).Sign(ctx, req.(*ClientInfo))
+	}
+	return interceptor(ctx, in, info, handler)
 }
 
 // Registration_ServiceDesc is the grpc.ServiceDesc for Registration service.
@@ -116,13 +90,12 @@ func (x *registrationSignServer) Send(m *Response) error {
 var Registration_ServiceDesc = grpc.ServiceDesc{
 	ServiceName: "proto.Registration",
 	HandlerType: (*RegistrationServer)(nil),
-	Methods:     []grpc.MethodDesc{},
-	Streams: []grpc.StreamDesc{
+	Methods: []grpc.MethodDesc{
 		{
-			StreamName:    "Sign",
-			Handler:       _Registration_Sign_Handler,
-			ServerStreams: true,
+			MethodName: "Sign",
+			Handler:    _Registration_Sign_Handler,
 		},
 	},
+	Streams:  []grpc.StreamDesc{},
 	Metadata: "proto/registration.proto",
 }

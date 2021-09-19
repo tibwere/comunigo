@@ -2,12 +2,10 @@ FROM golang:1.16-alpine AS build
 ENV GO111MODULE=on GOOS=linux GOARCH=amd64
 WORKDIR /registration-ms
 COPY . .
-RUN go mod download && go build -o server ./server/server.go
+RUN go mod download && mkdir ./bin/ && go build -o ./bin/server ./registration-ms/main.go
 
 FROM alpine:latest  
-ARG size
-ENV SIZE=$size
 WORKDIR /registration-ms
-COPY --from=build /registration-ms/server/server .
+COPY --from=build /registration-ms/bin/server .
 EXPOSE 2929
-ENTRYPOINT ./server -n $SIZE
+ENTRYPOINT ./server
