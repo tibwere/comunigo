@@ -1,12 +1,10 @@
-package main
+package registration
 
 import (
 	"context"
 	"encoding/json"
 	"fmt"
 	"net"
-	"os"
-	"strconv"
 
 	"github.com/go-redis/redis"
 	pb "gitlab.com/tibwere/comunigo/proto"
@@ -18,19 +16,12 @@ type RegistrationServer struct {
 	updateSync      []*chan bool
 	clientChan      chan *pb.ClientInfo
 	chatGroup       *pb.ChatGroupInfo
-	numberOfClients int
+	numberOfClients uint16
 }
 
-func (s *RegistrationServer) UpdateMembers() {
-
-	for len(s.chatGroup.Infos) < s.numberOfClients {
-		member := <-s.clientChan
-		s.chatGroup.Infos = append(s.chatGroup.Infos, member)
-	}
-
-	// Memorizza l'insieme dei client connessi su redis
+func (s *RegistrationServer) saveMembersOnRedis() {
 	redisClient := redis.NewClient(&redis.Options{
-		Addr:     "redis:6379",
+		Addr:     "registration_ds:6379",
 		Password: "",
 		DB:       0,
 	})
@@ -39,10 +30,21 @@ func (s *RegistrationServer) UpdateMembers() {
 		panic(err)
 	}
 	redisClient.Set("chat-group", jsonInfos, 0)
+}
 
+func (s *RegistrationServer) UpdateMembers() {
+
+	for uint16(len(s.chatGroup.Infos)) < s.numberOfClients {
+		fmt.Printf("Sono qui %v - %v\n", uint16(len(s.chatGroup.Infos)), s.numberOfClients)
+		member := <-s.clientChan
+		s.chatGroup.Infos = append(s.chatGroup.Infos, member)
+	}
+
+	fmt.Println("Sono uscito")
 	// Invia un messaggio di sincronizzazione a tutte
 	// le goroutine per inviare la risposta al client
 	for _, ch := range s.updateSync {
+		fmt.Println("Sto inviando i sync")
 		*ch <- true
 	}
 }
@@ -63,40 +65,24 @@ func (s *RegistrationServer) Sign(ctx context.Context, in *pb.ClientInfo) (*pb.C
 	return s.chatGroup, nil
 }
 
-func setChatGroupSize() (int, error) {
-	chosenSize, isPresent := os.LookupEnv("SIZE")
-	if isPresent {
-		return strconv.Atoi(chosenSize)
-	} else {
-		return 3, nil
-	}
-}
-
-func main() {
-
-	lis, err := net.Listen("tcp", ":2929")
-	if err != nil {
-		panic(err)
-	}
-
-	size, err := setChatGroupSize()
-	if err != nil {
-		panic(err)
-	}
-
-	fmt.Printf("In ascolto sulla porta 2929 (Dimensione del gruppo: %v)\n", size)
-
-	grpcServer := grpc.NewServer()
-	regServer := &RegistrationServer{
+func NewRegistrationServer(size uint16) *RegistrationServer {
+	return &RegistrationServer{
 		updateSync:      []*chan bool{},
 		clientChan:      make(chan *pb.ClientInfo),
 		chatGroup:       &pb.ChatGroupInfo{},
 		numberOfClients: size,
 	}
+}
 
-	regServer.chatGroup.Tos = pb.TypeOfService_SEQUENCER
+func ServeSignRequests(exposedPort uint16, regServer *RegistrationServer) {
 
-	go regServer.UpdateMembers()
+	lis, err := net.Listen("tcp", fmt.Sprintf(":%v", exposedPort))
+	if err != nil {
+		panic(err)
+	}
+
+	grpcServer := grpc.NewServer()
 	pb.RegisterRegistrationServer(grpcServer, regServer)
+
 	grpcServer.Serve(lis)
 }

@@ -1,33 +1,28 @@
 version: "3.9"
 services: 
-  redis:
+  registration_ds:
     image: "redis:alpine"
   registration_ms:
     build:
       context: .
       dockerfile: ./dockerfiles/Dockerfile.server
     environment: 
+      - REG_PORT
       - SIZE
-    ports:
-      - "2929:2929"
+      - VERBOSE
     depends_on: 
-      - "redis"
-  client_1:
+      - "registration_ds"
+  peer:
     build:
       context: .
-      dockerfile: ./dockerfiles/Dockerfile.client
+      dockerfile: ./dockerfiles/Dockerfile.peer
+    ports:
+      - $WS_PORT
     environment: 
-      - COMUNIGO_RHOST
-  client_2:
-    build:
-      context: .
-      dockerfile: ./dockerfiles/Dockerfile.client
-    environment: 
-      - COMUNIGO_RHOST
-  client_3:
-    build:
-      context: .
-      dockerfile: ./dockerfiles/Dockerfile.client
-    environment: 
-      - COMUNIGO_RHOST
-    
+      - WS_PORT
+      - REG_PORT
+      - REG_HOSTNAME
+      - SIZE
+      - VERBOSE
+      - TOS
+    scale: $SIZE
