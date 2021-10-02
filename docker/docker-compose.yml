@@ -1,0 +1,41 @@
+version: "3.9"
+
+services: 
+  # Microservizio di registrazione
+  registration_ms:
+    build:
+      context: ../
+      dockerfile: ./docker/registration/Dockerfile
+    environment: 
+      - REG_PORT
+      - SIZE
+      - VERBOSE
+      - SEQ_HOSTNAME
+
+  # Microservizio sequencer
+  sequencer_ms:
+    build:
+      context: ../
+      dockerfile: ./docker/sequencer/Dockerfile
+    environment:
+      - SEQ_PORT
+      - REG_PORT
+      - VERBOSE
+      - SIZE
+
+  # Microservizio peer
+  peer_ms:
+    build:
+      context: ../
+      dockerfile: ./docker/peer/Dockerfile
+    ports:
+      - $WS_PORT
+    environment: 
+      - WS_PORT
+      - REG_PORT
+      - SEQ_PORT
+      - SIZE
+      - REG_HOSTNAME
+      - SEQ_HOSTNAME
+      - VERBOSE
+    scale: $SIZE

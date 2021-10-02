@@ -14,16 +14,35 @@ var (
 var (
 	EnvWsPort        = "WS_PORT"
 	EnvRegPort       = "REG_PORT"
+	EnvSeqPort       = "SEQ_PORT"
 	EnvRegHostname   = "REG_HOSTNAME"
+	EnvSeqHostname   = "SEQ_HOSTNAME"
 	EnvSize          = "SIZE"
 	EnvEnableVerbose = "VERBOSE"
+	EnvRedisHostname = "REDIS_HOSTNAME"
 )
 
-type Configuration struct {
-	WebServerPort uint16
+type RegistrationServerConfig struct {
 	RegPort       uint16
 	ChatGroupSize uint16
+	EnableVerbose bool
+	SeqHostname   string
+}
+
+type SequencerServerConfig struct {
+	SeqPort       uint16
+	RegPort       uint16
+	ChatGroupSize uint16
+	EnableVerbose bool
+}
+
+type PeerConfig struct {
+	WebServerPort uint16
+	RegPort       uint16
+	SeqPort       uint16
+	ChatGroupSize uint16
 	RegHostname   string
+	SeqHostname   string
 	EnableVerbose bool
 }
 
@@ -42,10 +61,16 @@ func parseUint16FromEnv(envVar string) (uint16, error) {
 	}
 }
 
-func SetupRegistrationServerConfiguration() (*Configuration, error) {
-	c := &Configuration{}
+func SetupSequencerConfig() (*SequencerServerConfig, error) {
+	c := &SequencerServerConfig{}
 
-	val, err := parseUint16FromEnv(EnvRegPort)
+	val, err := parseUint16FromEnv(EnvSeqPort)
+	if err != nil {
+		return c, err
+	}
+	c.SeqPort = val
+
+	val, err = parseUint16FromEnv(EnvRegPort)
 	if err != nil {
 		return c, err
 	}
@@ -71,14 +96,74 @@ func SetupRegistrationServerConfiguration() (*Configuration, error) {
 	return c, nil
 }
 
-func SetupPeerConfiguration() (*Configuration, error) {
+func SetupRegistrationServerConfig() (*RegistrationServerConfig, error) {
+	c := &RegistrationServerConfig{}
 
-	c, err := SetupRegistrationServerConfiguration()
+	val, err := parseUint16FromEnv(EnvRegPort)
 	if err != nil {
-		return c, nil
+		return c, err
+	}
+	c.RegPort = val
+
+	val, err = parseUint16FromEnv(EnvSize)
+	if err != nil {
+		return c, err
+	}
+	c.ChatGroupSize = val
+
+	enable, isPresent := os.LookupEnv(EnvEnableVerbose)
+	if !isPresent {
+		c.EnableVerbose = false
+	} else {
+		if strings.ToLower(enable) == "true" {
+			c.EnableVerbose = true
+		} else {
+			c.EnableVerbose = false
+		}
 	}
 
-	val, err := parseUint16FromEnv(EnvWsPort)
+	rhost, isPresent := os.LookupEnv(EnvSeqHostname)
+	if !isPresent {
+		return c, ErrEnvNotFound
+	}
+	c.SeqHostname = rhost
+
+	return c, nil
+}
+
+func SetupPeerConfig() (*PeerConfig, error) {
+	c := &PeerConfig{}
+
+	val, err := parseUint16FromEnv(EnvRegPort)
+	if err != nil {
+		return c, err
+	}
+	c.RegPort = val
+
+	val, err = parseUint16FromEnv(EnvSeqPort)
+	if err != nil {
+		return c, err
+	}
+	c.SeqPort = val
+
+	val, err = parseUint16FromEnv(EnvSize)
+	if err != nil {
+		return c, err
+	}
+	c.ChatGroupSize = val
+
+	enable, isPresent := os.LookupEnv(EnvEnableVerbose)
+	if !isPresent {
+		c.EnableVerbose = false
+	} else {
+		if strings.ToLower(enable) == "true" {
+			c.EnableVerbose = true
+		} else {
+			c.EnableVerbose = false
+		}
+	}
+
+	val, err = parseUint16FromEnv(EnvWsPort)
 	if err != nil {
 		return c, err
 	}
@@ -89,6 +174,12 @@ func SetupPeerConfiguration() (*Configuration, error) {
 		return c, ErrEnvNotFound
 	}
 	c.RegHostname = rhost
+
+	rhost, isPresent = os.LookupEnv(EnvSeqHostname)
+	if !isPresent {
+		return c, ErrEnvNotFound
+	}
+	c.SeqHostname = rhost
 
 	return c, nil
 }

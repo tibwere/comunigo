@@ -1,0 +1,23 @@
+syntax = "proto3";
+
+option go_package = "gitlab.com/tibwere/comunigo/proto";
+
+package proto;
+
+import "google/protobuf/empty.proto";
+
+service Chat {
+    rpc SendToSequencer(UnorderedMessage) returns (google.protobuf.Empty);
+    rpc SendToPeer(OrderedMessage) returns (google.protobuf.Empty);
+}
+
+message UnorderedMessage {
+    string From = 1;
+    string Body = 2;
+}
+
+message OrderedMessage {
+    uint64 ID = 1;
+    string From = 2;
+    string Body = 3;
+}

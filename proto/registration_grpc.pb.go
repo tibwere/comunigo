@@ -4,6 +4,7 @@ package proto
 
 import (
 	context "context"
+	empty "github.com/golang/protobuf/ptypes/empty"
 	grpc "google.golang.org/grpc"
 	codes "google.golang.org/grpc/codes"
 	status "google.golang.org/grpc/status"
@@ -18,7 +19,8 @@ const _ = grpc.SupportPackageIsVersion7
 //
 // For semantics around ctx use and closing/ending streaming RPCs, please refer to https://pkg.go.dev/google.golang.org/grpc/?tab=doc#ClientConn.NewStream.
 type RegistrationClient interface {
-	Sign(ctx context.Context, in *ClientInfo, opts ...grpc.CallOption) (*ChatGroupInfo, error)
+	Sign(ctx context.Context, in *ClientInfo, opts ...grpc.CallOption) (Registration_SignClient, error)
+	StartSequencer(ctx context.Context, opts ...grpc.CallOption) (Registration_StartSequencerClient, error)
 }
 
 type registrationClient struct {
@@ -29,20 +31,78 @@ func NewRegistrationClient(cc grpc.ClientConnInterface) RegistrationClient {
 	return &registrationClient{cc}
 }
 
-func (c *registrationClient) Sign(ctx context.Context, in *ClientInfo, opts ...grpc.CallOption) (*ChatGroupInfo, error) {
-	out := new(ChatGroupInfo)
-	err := c.cc.Invoke(ctx, "/proto.Registration/Sign", in, out, opts...)
+func (c *registrationClient) Sign(ctx context.Context, in *ClientInfo, opts ...grpc.CallOption) (Registration_SignClient, error) {
+	stream, err := c.cc.NewStream(ctx, &Registration_ServiceDesc.Streams[0], "/proto.Registration/Sign", opts...)
 	if err != nil {
 		return nil, err
 	}
-	return out, nil
+	x := &registrationSignClient{stream}
+	if err := x.ClientStream.SendMsg(in); err != nil {
+		return nil, err
+	}
+	if err := x.ClientStream.CloseSend(); err != nil {
+		return nil, err
+	}
+	return x, nil
+}
+
+type Registration_SignClient interface {
+	Recv() (*ClientInfo, error)
+	grpc.ClientStream
+}
+
+type registrationSignClient struct {
+	grpc.ClientStream
+}
+
+func (x *registrationSignClient) Recv() (*ClientInfo, error) {
+	m := new(ClientInfo)
+	if err := x.ClientStream.RecvMsg(m); err != nil {
+		return nil, err
+	}
+	return m, nil
+}
+
+func (c *registrationClient) StartSequencer(ctx context.Context, opts ...grpc.CallOption) (Registration_StartSequencerClient, error) {
+	stream, err := c.cc.NewStream(ctx, &Registration_ServiceDesc.Streams[1], "/proto.Registration/StartSequencer", opts...)
+	if err != nil {
+		return nil, err
+	}
+	x := &registrationStartSequencerClient{stream}
+	return x, nil
+}
+
+type Registration_StartSequencerClient interface {
+	Send(*ClientInfo) error
+	CloseAndRecv() (*empty.Empty, error)
+	grpc.ClientStream
+}
+
+type registrationStartSequencerClient struct {
+	grpc.ClientStream
+}
+
+func (x *registrationStartSequencerClient) Send(m *ClientInfo) error {
+	return x.ClientStream.SendMsg(m)
+}
+
+func (x *registrationStartSequencerClient) CloseAndRecv() (*empty.Empty, error) {
+	if err := x.ClientStream.CloseSend(); err != nil {
+		return nil, err
+	}
+	m := new(empty.Empty)
+	if err := x.ClientStream.RecvMsg(m); err != nil {
+		return nil, err
+	}
+	return m, nil
 }
 
 // RegistrationServer is the server API for Registration service.
 // All implementations must embed UnimplementedRegistrationServer
 // for forward compatibility
 type RegistrationServer interface {
-	Sign(context.Context, *ClientInfo) (*ChatGroupInfo, error)
+	Sign(*ClientInfo, Registration_SignServer) error
+	StartSequencer(Registration_StartSequencerServer) error
 	mustEmbedUnimplementedRegistrationServer()
 }
 
@@ -50,8 +110,11 @@ type RegistrationServer interface {
 type UnimplementedRegistrationServer struct {
 }
 
-func (UnimplementedRegistrationServer) Sign(context.Context, *ClientInfo) (*ChatGroupInfo, error) {
-	return nil, status.Errorf(codes.Unimplemented, "method Sign not implemented")
+func (UnimplementedRegistrationServer) Sign(*ClientInfo, Registration_SignServer) error {
+	return status.Errorf(codes.Unimplemented, "method Sign not implemented")
+}
+func (UnimplementedRegistrationServer) StartSequencer(Registration_StartSequencerServer) error {
+	return status.Errorf(codes.Unimplemented, "method StartSequencer not implemented")
 }
 func (UnimplementedRegistrationServer) mustEmbedUnimplementedRegistrationServer() {}
 
@@ -66,22 +129,51 @@ func RegisterRegistrationServer(s grpc.ServiceRegistrar, srv RegistrationServer)
 	s.RegisterService(&Registration_ServiceDesc, srv)
 }
 
-func _Registration_Sign_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
-	in := new(ClientInfo)
-	if err := dec(in); err != nil {
+func _Registration_Sign_Handler(srv interface{}, stream grpc.ServerStream) error {
+	m := new(ClientInfo)
+	if err := stream.RecvMsg(m); err != nil {
+		return err
+	}
+	return srv.(RegistrationServer).Sign(m, &registrationSignServer{stream})
+}
+
+type Registration_SignServer interface {
+	Send(*ClientInfo) error
+	grpc.ServerStream
+}
+
+type registrationSignServer struct {
+	grpc.ServerStream
+}
+
+func (x *registrationSignServer) Send(m *ClientInfo) error {
+	return x.ServerStream.SendMsg(m)
+}
+
+func _Registration_StartSequencer_Handler(srv interface{}, stream grpc.ServerStream) error {
+	return srv.(RegistrationServer).StartSequencer(&registrationStartSequencerServer{stream})
+}
+
+type Registration_StartSequencerServer interface {
+	SendAndClose(*empty.Empty) error
+	Recv() (*ClientInfo, error)
+	grpc.ServerStream
+}
+
+type registrationStartSequencerServer struct {
+	grpc.ServerStream
+}
+
+func (x *registrationStartSequencerServer) SendAndClose(m *empty.Empty) error {
+	return x.ServerStream.SendMsg(m)
+}
+
+func (x *registrationStartSequencerServer) Recv() (*ClientInfo, error) {
+	m := new(ClientInfo)
+	if err := x.ServerStream.RecvMsg(m); err != nil {
 		return nil, err
 	}
-	if interceptor == nil {
-		return srv.(RegistrationServer).Sign(ctx, in)
-	}
-	info := &grpc.UnaryServerInfo{
-		Server:     srv,
-		FullMethod: "/proto.Registration/Sign",
-	}
-	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
-		return srv.(RegistrationServer).Sign(ctx, req.(*ClientInfo))
-	}
-	return interceptor(ctx, in, info, handler)
+	return m, nil
 }
 
 // Registration_ServiceDesc is the grpc.ServiceDesc for Registration service.
@@ -90,12 +182,18 @@ func _Registration_Sign_Handler(srv interface{}, ctx context.Context, dec func(i
 var Registration_ServiceDesc = grpc.ServiceDesc{
 	ServiceName: "proto.Registration",
 	HandlerType: (*RegistrationServer)(nil),
-	Methods: []grpc.MethodDesc{
+	Methods:     []grpc.MethodDesc{},
+	Streams: []grpc.StreamDesc{
 		{
-			MethodName: "Sign",
-			Handler:    _Registration_Sign_Handler,
+			StreamName:    "Sign",
+			Handler:       _Registration_Sign_Handler,
+			ServerStreams: true,
+		},
+		{
+			StreamName:    "StartSequencer",
+			Handler:       _Registration_StartSequencer_Handler,
+			ClientStreams: true,
 		},
 	},
-	Streams:  []grpc.StreamDesc{},
 	Metadata: "proto/registration.proto",
 }

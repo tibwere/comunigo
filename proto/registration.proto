@@ -4,8 +4,12 @@ option go_package = "gitlab.com/tibwere/comunigo/proto";
 
 package proto;
 
+import "google/protobuf/empty.proto";
+
+
 service Registration {
-    rpc Sign(ClientInfo) returns (ChatGroupInfo);
+    rpc Sign(ClientInfo) returns (stream ClientInfo);
+    rpc StartSequencer(stream ClientInfo) returns (google.protobuf.Empty);
 }
 
 message ClientInfo {
@@ -13,6 +17,4 @@ message ClientInfo {
     string Hostname = 2;
 }
 
-message ChatGroupInfo {
-    repeated ClientInfo infos = 2;
-}
+message Empty {}
