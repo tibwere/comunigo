@@ -4,8 +4,8 @@ services:
   # Microservizio di registrazione
   registration_ms:
     build:
-      context: ../
-      dockerfile: ./docker/registration/Dockerfile
+      context: .
+      dockerfile: ./dockerfiles/registration/Dockerfile
     environment: 
       - REG_PORT
       - SIZE
@@ -15,8 +15,8 @@ services:
   # Microservizio sequencer
   sequencer_ms:
     build:
-      context: ../
-      dockerfile: ./docker/sequencer/Dockerfile
+      context: .
+      dockerfile: ./dockerfiles/sequencer/Dockerfile
     environment:
       - SEQ_PORT
       - REG_PORT
@@ -26,8 +26,8 @@ services:
   # Microservizio peer
   peer_ms:
     build:
-      context: ../
-      dockerfile: ./docker/peer/Dockerfile
+      context: .
+      dockerfile: ./dockerfiles/peer/Dockerfile
     ports:
       - $WS_PORT
     environment: 
