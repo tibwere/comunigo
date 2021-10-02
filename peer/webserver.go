@@ -10,6 +10,16 @@ import (
 	"github.com/labstack/echo/v4/middleware"
 )
 
+const (
+	POSTUsernameParam = "username"
+	POSTMessageParam  = "message"
+)
+
+const (
+	RouteSing = "/sign"
+	RouteSend = "/send"
+)
+
 func StartupWebServer(port uint16, size uint16, channels *PeerChannels, usernamePtr *string, wg *sync.WaitGroup) {
 	defer wg.Done()
 
@@ -17,33 +27,47 @@ func StartupWebServer(port uint16, size uint16, channels *PeerChannels, username
 	e.Use(middleware.Logger())
 	e.Use(middleware.Recover())
 
-	e.POST("/sign", func(c echo.Context) error {
-		return signNewUserHandler(c, size, usernamePtr, channels.UsernameCh)
+	e.POST(RouteSing, func(c echo.Context) error {
+		return signNewUserHandler(c, size, usernamePtr, channels.UsernameCh, channels.InvalidCh)
 	})
 
-	e.POST("/send", func(c echo.Context) error {
+	e.POST(RouteSend, func(c echo.Context) error {
 		return sendMessage(c, usernamePtr, channels.RawMessageCh)
 	})
 	e.Logger.Fatal(e.Start(fmt.Sprintf(":%v", port)))
 }
 
-func signNewUserHandler(c echo.Context, size uint16, usernamePtr *string, usernameCh chan string) error {
+func comunicateMembers(c echo.Context, members []string) error {
+	jsonMembers, err := json.Marshal(members)
+	if err != nil {
+		return c.NoContent(http.StatusForbidden)
+	} else {
+		return c.JSON(http.StatusOK, jsonMembers)
+	}
+}
+
+func notifyInvalidUsername(c echo.Context) error {
+	errorMessage := []byte(`{"error":"Username already in use!"}`)
+	return c.JSON(http.StatusOK, errorMessage)
+}
+
+func signNewUserHandler(c echo.Context, size uint16, usernamePtr *string, usernameCh chan string, invalidCh chan bool) error {
 	if *usernamePtr == "" {
 		var i uint16
 		var members []string
 
-		usernameCh <- c.FormValue("username")
+		usernameCh <- c.FormValue(POSTUsernameParam)
 
 		for i = 0; i < size; i++ {
-			members = append(members, <-usernameCh)
+			select {
+			case m := <-usernameCh:
+				members = append(members, m)
+			case <-invalidCh:
+				return notifyInvalidUsername(c)
+			}
 		}
 
-		jsonMembers, err := json.Marshal(members)
-		if err != nil {
-			return c.NoContent(http.StatusForbidden)
-		} else {
-			return c.JSON(http.StatusOK, jsonMembers)
-		}
+		return comunicateMembers(c, members)
 
 	} else {
 		return c.NoContent(http.StatusForbidden)
@@ -54,7 +78,7 @@ func sendMessage(c echo.Context, usernamePtr *string, messageCh chan string) err
 	if *usernamePtr == "" {
 		return c.NoContent(http.StatusForbidden)
 	} else {
-		messageCh <- c.FormValue("message")
+		messageCh <- c.FormValue(POSTMessageParam)
 		return c.HTML(http.StatusOK, "Message sent!")
 	}
 }

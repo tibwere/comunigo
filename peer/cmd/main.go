@@ -33,7 +33,12 @@ func main() {
 	go func() {
 		defer wg.Done()
 
-		currentUser, err = grpchandler.SignToRegister(config.RegHostname, config.RegPort, channels.UsernameCh)
+		currentUser, err = grpchandler.SignToRegister(
+			config.RegHostname,
+			config.RegPort,
+			channels.UsernameCh,
+			channels.InvalidCh,
+		)
 		if err != nil {
 			log.Fatalf("Unable to sign to register node")
 		}
