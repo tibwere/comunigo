@@ -13,7 +13,7 @@ func main() {
 	var wg sync.WaitGroup
 	membersCh := make(chan string)
 
-	config, err := config.SetupSequencerConfig()
+	config, err := config.SetupSequencer()
 	if err != nil {
 		log.Fatalf("Unable to load configurations (%v)\n", err)
 	}

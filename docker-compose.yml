@@ -37,5 +37,13 @@ services:
       - SIZE
       - REG_HOSTNAME
       - SEQ_HOSTNAME
+      - REDIS_HOSTNAME
       - VERBOSE
     scale: $SIZE
+    depends_on: 
+      - "peer_ds"
+    volumes:
+      - ./peer/webserver/assets:/assets
+
+  peer_ds:
+    image: "redis:alpine"

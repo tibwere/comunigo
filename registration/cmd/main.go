@@ -12,7 +12,7 @@ import (
 func main() {
 	var wg sync.WaitGroup
 
-	config, err := config.SetupRegistrationServerConfig()
+	config, err := config.SetupRegistrationServer()
 	if err != nil {
 		log.Fatalf("Unable to load configurations (%v)\n", err)
 	}

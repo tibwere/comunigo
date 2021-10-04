@@ -7,46 +7,35 @@ import (
 	"gitlab.com/tibwere/comunigo/config"
 	"gitlab.com/tibwere/comunigo/peer"
 	"gitlab.com/tibwere/comunigo/peer/grpchandler"
+	"gitlab.com/tibwere/comunigo/peer/webserver"
 )
-
-var currentUser string
 
 func main() {
 	var wg sync.WaitGroup
 
-	config, err := config.SetupPeerConfig()
+	config, err := config.SetupPeer()
 	if err != nil {
 		panic(err)
 	}
 
-	channels := peer.InitChannels()
-	currentUser = ""
+	status := peer.Init(config.RedisHostname)
+	webserver := webserver.New(config.WebServerPort, config.ChatGroupSize, status)
+	grpcHandler := grpchandler.New(config, status)
 
 	wg.Add(2)
-	go peer.StartupWebServer(
-		config.WebServerPort,
-		config.ChatGroupSize,
-		channels,
-		&currentUser,
-		&wg,
-	)
+	go webserver.Startup(&wg)
 	go func() {
 		defer wg.Done()
 
-		currentUser, err = grpchandler.SignToRegister(
-			config.RegHostname,
-			config.RegPort,
-			channels.UsernameCh,
-			channels.InvalidCh,
-		)
+		err = grpcHandler.SignToRegister()
 		if err != nil {
 			log.Fatalf("Unable to sign to register node")
 		}
 
 		var childWg sync.WaitGroup
 		childWg.Add(2)
-		go grpchandler.ReceiveMessages(config.SeqPort, &childWg)
-		go grpchandler.SendMessages(config.SeqHostname, config.SeqPort, currentUser, channels.RawMessageCh, &childWg)
+		go grpcHandler.ReceiveMessages(&childWg)
+		go grpcHandler.SendMessages(&childWg)
 		childWg.Wait()
 	}()
 	wg.Wait()

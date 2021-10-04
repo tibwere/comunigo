@@ -7,20 +7,24 @@ import (
 	"net"
 	"sync"
 
+	"github.com/go-redis/redis"
 	"github.com/golang/protobuf/ptypes/empty"
+	"gitlab.com/tibwere/comunigo/peer"
 	"gitlab.com/tibwere/comunigo/proto"
 	"google.golang.org/grpc"
 )
 
 type ReceiverSequencerServer struct {
 	proto.UnimplementedChatServer
+	datastore   *redis.Client
+	currentUser string
 }
 
-func SendMessages(addr string, port uint16, currUser string, messageCh chan string, wg *sync.WaitGroup) error {
+func (gh *GrpcHandler) SendMessages(wg *sync.WaitGroup) error {
 	defer wg.Done()
 
 	conn, err := grpc.Dial(
-		fmt.Sprintf("%v:%v", addr, port),
+		fmt.Sprintf("%v:%v", gh.sequencerAddr, gh.sequencerPort),
 		grpc.WithInsecure(),
 		grpc.WithBlock(),
 	)
@@ -33,8 +37,8 @@ func SendMessages(addr string, port uint16, currUser string, messageCh chan stri
 
 	for {
 		_, err := c.SendToSequencer(context.Background(), &proto.UnorderedMessage{
-			From: currUser,
-			Body: <-messageCh,
+			From: gh.peerStatus.CurrentUsername,
+			Body: <-gh.peerStatus.RawMessageCh,
 		})
 		if err != nil {
 			return err
@@ -44,19 +48,25 @@ func SendMessages(addr string, port uint16, currUser string, messageCh chan stri
 
 func (s *ReceiverSequencerServer) SendToPeer(ctx context.Context, in *proto.OrderedMessage) (*empty.Empty, error) {
 	log.Printf("Received '%v' from %v (ID: %v)", in.GetBody(), in.GetFrom(), in.GetID())
+	peer.InsertMessage(s.datastore, s.currentUser, in)
+
 	return &empty.Empty{}, nil
 }
 
-func ReceiveMessages(port uint16, wg *sync.WaitGroup) error {
+func (gh *GrpcHandler) ReceiveMessages(wg *sync.WaitGroup) error {
 	defer wg.Done()
 
-	lis, err := net.Listen("tcp", fmt.Sprintf(":%v", port))
+	lis, err := net.Listen("tcp", fmt.Sprintf(":%v", gh.sequencerPort))
 	if err != nil {
 		return err
 	}
 	grpcServer := grpc.NewServer()
 
-	proto.RegisterChatServer(grpcServer, &ReceiverSequencerServer{})
+	proto.RegisterChatServer(grpcServer, &ReceiverSequencerServer{
+		datastore:   gh.peerStatus.Datastore,
+		currentUser: gh.peerStatus.CurrentUsername,
+	})
+
 	grpcServer.Serve(lis)
 
 	return nil

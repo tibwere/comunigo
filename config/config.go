@@ -43,6 +43,7 @@ type PeerConfig struct {
 	ChatGroupSize uint16
 	RegHostname   string
 	SeqHostname   string
+	RedisHostname string
 	EnableVerbose bool
 }
 
@@ -61,7 +62,7 @@ func parseUint16FromEnv(envVar string) (uint16, error) {
 	}
 }
 
-func SetupSequencerConfig() (*SequencerServerConfig, error) {
+func SetupSequencer() (*SequencerServerConfig, error) {
 	c := &SequencerServerConfig{}
 
 	val, err := parseUint16FromEnv(EnvSeqPort)
@@ -96,7 +97,7 @@ func SetupSequencerConfig() (*SequencerServerConfig, error) {
 	return c, nil
 }
 
-func SetupRegistrationServerConfig() (*RegistrationServerConfig, error) {
+func SetupRegistrationServer() (*RegistrationServerConfig, error) {
 	c := &RegistrationServerConfig{}
 
 	val, err := parseUint16FromEnv(EnvRegPort)
@@ -131,7 +132,7 @@ func SetupRegistrationServerConfig() (*RegistrationServerConfig, error) {
 	return c, nil
 }
 
-func SetupPeerConfig() (*PeerConfig, error) {
+func SetupPeer() (*PeerConfig, error) {
 	c := &PeerConfig{}
 
 	val, err := parseUint16FromEnv(EnvRegPort)
@@ -180,6 +181,12 @@ func SetupPeerConfig() (*PeerConfig, error) {
 		return c, ErrEnvNotFound
 	}
 	c.SeqHostname = rhost
+
+	rhost, isPresent = os.LookupEnv(EnvRedisHostname)
+	if !isPresent {
+		return c, ErrEnvNotFound
+	}
+	c.RedisHostname = rhost
 
 	return c, nil
 }
