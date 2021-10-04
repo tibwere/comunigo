@@ -64,10 +64,12 @@ func (ws *WebServer) Startup(wg *sync.WaitGroup) {
 	e.Logger.Fatal(e.Start(fmt.Sprintf(":%v", ws.port)))
 }
 
-func (ws *WebServer) getListOfUsername() []string {
+func (ws *WebServer) getListOfOtherUsername() []string {
 	var usernames []string
 	for _, member := range ws.peerStatus.Members {
-		usernames = append(usernames, member.GetUsername())
+		if member.GetUsername() != ws.peerStatus.CurrentUsername {
+			usernames = append(usernames, member.GetUsername())
+		}
 	}
 
 	return usernames
@@ -80,7 +82,10 @@ func (ws *WebServer) mainPageHandler(c echo.Context) error {
 			ErrorMessage: "",
 		})
 	} else {
-		return c.File("/assets/index.html")
+		return c.Render(http.StatusOK, "index", indexTemplate{
+			Username: ws.peerStatus.CurrentUsername,
+			Members:  ws.getListOfOtherUsername(),
+		})
 	}
 }
 
@@ -92,13 +97,13 @@ func (ws *WebServer) signNewUserHandler(c echo.Context) error {
 		case <-ws.peerStatus.DoneCh:
 			return c.Render(http.StatusOK, "index", indexTemplate{
 				Username: ws.peerStatus.CurrentUsername,
-				Members:  ws.getListOfUsername(),
+				Members:  ws.getListOfOtherUsername(),
 			})
 
 		case <-ws.peerStatus.InvalidCh:
 			return c.Render(http.StatusOK, "login", loginTemplate{
 				IsError:      true,
-				ErrorMessage: "Username already in use!",
+				ErrorMessage: "Username already in use, please retry with another one!",
 			})
 		}
 	} else {
