@@ -48,7 +48,7 @@ func (ws *WebServer) Startup(wg *sync.WaitGroup) {
 	e.Logger.Fatal(e.Start(fmt.Sprintf(":%v", ws.port)))
 }
 
-func sendJSONString(c echo.Context, data map[string]interface{}) error {
+func sendJSONString(c echo.Context, data interface{}) error {
 	jsondata, err := json.Marshal(data)
 	if err != nil {
 		return c.NoContent(http.StatusInternalServerError)
@@ -83,9 +83,7 @@ func (ws *WebServer) updateMessageList(c echo.Context) error {
 			return c.NoContent(http.StatusInternalServerError)
 		}
 
-		return sendJSONString(c, map[string]interface{}{
-			"MessageList": messages,
-		})
+		return sendJSONString(c, messages)
 	}
 }
 
