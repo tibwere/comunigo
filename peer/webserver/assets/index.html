@@ -12,66 +12,65 @@
         <title>comuniGO</title>
     </head>
     <body>
-        <div class="row mt-4">
-            <div class="col-4 offset-4 text-center">
-                <h3 class="text-center mt-2">Welcome in</h3>
-                <h1 class="text-center mb-4">comuni<b>GO</b></h1>
-            </div>
-        </div>
-        <div class="row">
-            <div class="col-2 offset-4 text-center">
-                <h5 class="text-center mt-2">
-                    You: <span class="text-success" id="me"></span>
-                </h5>
-            </div>
-            <div class="col-2 text-center">
-                <button type="button" class="btn btn-outline-dark btn-sm" data-bs-toggle="modal" data-bs-target="#otherMembersModal">
-                    Other members
-                </button>
-            </div>
-        </div>
-        <div class="row mt-4">
-            <div class="col-4 offset-4 text-center">
-                <form id="sendForm">
-                    <div class="form-group mb-4">
-                        <label for="message">Message</label>
-                        <input type="textarea" class="form-control" name="message" id="message" placeholder="Enter new message" required="required">
-                    </div>
-                    <button type="submit" class="btn btn-dark" id="sendBtn">
-                        <i class="fas fa-paper-plane"></i> Send Message
-                    </button>
-                    <div class="alert alert-success mt-3" id="alertMsg" role="alert" style="display: none;">
-                        Messaggio inviato con <strong class="text-success">successo</strong>!
-                    </div>
-                </form>
-            </div>
-        </div>
-        <div class="row mt-4">
-            <h3 class="text-center">Storico messaggi</h3>
-            <div class="col-6 offset-3 text-left">
-                <ul class="list-group" id="messageList">
-                </ul>
-            </div>
-        </div>
-
-        <!-- Modal -->
-        <div class="modal fade" id="otherMembersModal" tabindex="-1" aria-labelledby="titleLabel" aria-hidden="true">
-            <div class="modal-dialog">
-            <div class="modal-content">
-                <div class="modal-header">
-                <h5 class="modal-title" id="titleLabel">Other members</h5>
-                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+        <div class="container">
+            <div class="row mt-2 align-items-center bg-dark text-white p-2">
+                <div class="col-3 offset-1 text-center">
+                    <h3 class="text-center">Hi <span class="text-warning" id="me"></span>!</h3>
                 </div>
-                <div class="modal-body">
-                    <ul class="list-group" id="memberList">
+                <div class="col-4 text-center">
+                    <h3 class="text-center">Enjoy comuni<strong class="text-warning">GO</strong>!</h3>
+                </div>
+                <div class="col-3 text-center">
+                    <button type="button" class="btn btn-outline-warning btn-sm" data-bs-toggle="modal" data-bs-target="#otherMembersModal">
+                        Other members
+                    </button>
+                </div>
+            </div>
+            <div class="row mt-4">
+                <div class="col-4 offset-4 text-center">
+                    <form id="sendForm">
+                        <div class="form-group mb-4">
+                            <label for="message">Message</label>
+                            <input type="text" class="form-control" name="message" id="message" placeholder="Enter new message" required="required">
+                        </div>
+                        <button type="submit" class="btn btn-warning" id="sendBtn">
+                            <i class="fas fa-paper-plane"></i> Send Message
+                        </button>
+                        <div class="alert alert-success mt-3" id="alertMsg" role="alert" style="display: none;">
+                            Message <strong class="text-success">successfully</strong> sent!
+                        </div>
+                    </form>
+                </div>
+            </div>
+            <div class="row mt-4">
+                <h3 class="text-center">Message history</h3>
+                <div class="alert alert-warning text-center" role="alert" id="emptyMessageListAlert">
+                    Messages will be displayed here as soon as they are received
+                </div>
+                <div class="col-6 offset-3 text-left">
+                    <ul class="list-group" id="messageList">
                     </ul>
                 </div>
-                <div class="modal-footer">
-                <button type="button" class="btn btn-dark" data-bs-dismiss="modal">Close</button>
+            </div>
+
+            <!-- Modal -->
+            <div class="modal fade" id="otherMembersModal" tabindex="-1" aria-labelledby="titleLabel" aria-hidden="true">
+                <div class="modal-dialog">
+                <div class="modal-content">
+                    <div class="modal-header">
+                    <h5 class="modal-title" id="titleLabel">Other members</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                    </div>
+                    <div class="modal-body">
+                        <ul class="list-group" id="memberList">
+                        </ul>
+                    </div>
+                    <div class="modal-footer">
+                    <button type="button" class="btn btn-dark" data-bs-dismiss="modal">Close</button>
+                    </div>
+                </div>
                 </div>
             </div>
-            </div>
-        </div>
 
 
         </div> 
