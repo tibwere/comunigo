@@ -49,7 +49,6 @@ func (gh *GrpcHandler) SendMessages(wg *sync.WaitGroup) error {
 func (s *ReceiverSequencerServer) SendToPeer(ctx context.Context, in *proto.OrderedMessage) (*empty.Empty, error) {
 	log.Printf("Received '%v' from %v (ID: %v)", in.GetBody(), in.GetFrom(), in.GetID())
 	peer.InsertMessage(s.datastore, s.currentUser, in)
-	fmt.Println("L'ho bello che inserito sto messaggio")
 	return &empty.Empty{}, nil
 }
 
