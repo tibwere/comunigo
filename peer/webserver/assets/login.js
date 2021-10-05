@@ -20,6 +20,11 @@ $("#signform").submit(function (e) {
             if (decoded.IsError == true) {
                 $("#errorMsg").html(decoded.ErrorMessage)
                 $("#errorMsg").fadeIn()
+
+                $("#signBtn").empty()
+                $("#signBtn").append('<i class="fas fa-sign-in-alt"></i> Login')
+                $("#signBtn").prop("disabled", false);
+
                 setTimeout(function(){
                     $("#errorMsg").fadeOut()
                 }, 1500)

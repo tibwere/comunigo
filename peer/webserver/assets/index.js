@@ -1,5 +1,6 @@
 $( document ).ready(function() {
     metadata = $.parseJSON(sessionStorage.getItem("comunigo-metadata"))
+    sessionStorage.setItem("currentUser", metadata.Username)
     console.log(metadata)
     document.title = metadata.Username + " - comuniGO"
 
@@ -40,7 +41,13 @@ setInterval(function(){
             messages = $.parseJSON(response).MessageList
             if (messages != null) {
                 sessionStorage.setItem("index", index + messages.length)
-                messages.forEach(m => $("#messageList").append('<li class="list-group-item"><strong class="text-success">(' + m.From + ')</strong> ' + m.Body + '</li>'))                        
+                $.each(messages, function(i, m) {
+                    if (m.From == sessionStorage.getItem("currentUser")) {
+                        $("#messageList").append('<li class="list-group-item list-group-item-success"><strong class="text-success">(' + m.From + ')</strong> ' + m.Body + '</li>')                    
+                    } else {
+                        $("#messageList").append('<li class="list-group-item list-group-item-secondary"><strong class="text-secondary">(' + m.From + ')</strong> ' + m.Body + '</li>')
+                    }
+                })                      
             }
         }
     });
