@@ -50,7 +50,8 @@ func GetMessages(ds *redis.Client, rootKey string, startID uint64) ([]*proto.Ord
 		} else if err != nil {
 			return nil, err
 		} else {
-			json.Unmarshal([]byte(jsonMes), &mes)
+			mes = &proto.OrderedMessage{}
+			json.Unmarshal([]byte(jsonMes), mes)
 			fmt.Println(mes)
 			messages = append(messages, mes)
 			currentIndex++
