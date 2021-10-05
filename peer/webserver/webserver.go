@@ -1,15 +1,16 @@
 package webserver
 
 import (
+	"encoding/json"
 	"fmt"
-	"io"
 	"net/http"
+	"strconv"
 	"sync"
-	"text/template"
 
 	"github.com/labstack/echo/v4"
 	"github.com/labstack/echo/v4/middleware"
 	"gitlab.com/tibwere/comunigo/peer"
+	"gitlab.com/tibwere/comunigo/proto"
 )
 
 const (
@@ -19,21 +20,24 @@ const (
 	RouteRoot = "/"
 )
 
-type loginTemplate struct {
+type errorSignToFrontend struct {
 	IsError      bool
 	ErrorMessage string
 }
 
-type indexTemplate struct {
+type okSignToFrontend struct {
 	Username string
 	Members  []string
+}
+
+type listToFrontend struct {
+	MessageList []*proto.OrderedMessage
 }
 
 type WebServer struct {
 	port          uint16
 	chatGroupSize uint16
 	peerStatus    *peer.Status
-	templates     *template.Template
 }
 
 func New(exposedPort uint16, size uint16, status *peer.Status) *WebServer {
@@ -41,12 +45,7 @@ func New(exposedPort uint16, size uint16, status *peer.Status) *WebServer {
 		port:          exposedPort,
 		chatGroupSize: size,
 		peerStatus:    status,
-		templates:     template.Must(template.ParseGlob("/assets/*.html")),
 	}
-}
-
-func (ws *WebServer) Render(w io.Writer, name string, data interface{}, c echo.Context) error {
-	return ws.templates.ExecuteTemplate(w, name, data)
 }
 
 func (ws *WebServer) Startup(wg *sync.WaitGroup) {
@@ -55,13 +54,22 @@ func (ws *WebServer) Startup(wg *sync.WaitGroup) {
 	e := echo.New()
 	e.Use(middleware.Logger())
 	e.Use(middleware.Recover())
-	e.Renderer = ws
 
 	e.Static(RouteRoot, "/assets")
 	e.GET(RouteRoot, ws.mainPageHandler)
+	e.POST(RouteList, ws.updateMessageList)
 	e.POST(RouteSing, ws.signNewUserHandler)
 	e.POST(RouteSend, ws.sendMessageHandler)
 	e.Logger.Fatal(e.Start(fmt.Sprintf(":%v", ws.port)))
+}
+
+func sendJSONString(c echo.Context, data interface{}) error {
+	jsondata, err := json.Marshal(data)
+	if err != nil {
+		return c.NoContent(http.StatusInternalServerError)
+	} else {
+		return c.JSON(http.StatusOK, string(jsondata))
+	}
 }
 
 func (ws *WebServer) getListOfOtherUsername() []string {
@@ -75,17 +83,32 @@ func (ws *WebServer) getListOfOtherUsername() []string {
 	return usernames
 }
 
+func (ws *WebServer) updateMessageList(c echo.Context) error {
+
+	if ws.peerStatus.CurrentUsername == "" {
+		return c.NoContent(http.StatusForbidden)
+	} else {
+		nextIndex, err := strconv.ParseUint(c.FormValue("next"), 10, 16)
+		if err != nil {
+			return c.NoContent(http.StatusInternalServerError)
+		}
+
+		messages, err := peer.GetMessages(ws.peerStatus.Datastore, ws.peerStatus.CurrentUsername, nextIndex)
+		if err != nil {
+			return c.NoContent(http.StatusInternalServerError)
+		}
+
+		return sendJSONString(c, &listToFrontend{
+			MessageList: messages,
+		})
+	}
+}
+
 func (ws *WebServer) mainPageHandler(c echo.Context) error {
 	if ws.peerStatus.CurrentUsername == "" {
-		return c.Render(http.StatusOK, "login", loginTemplate{
-			IsError:      false,
-			ErrorMessage: "",
-		})
+		return c.File("/assets/login.html")
 	} else {
-		return c.Render(http.StatusOK, "index", indexTemplate{
-			Username: ws.peerStatus.CurrentUsername,
-			Members:  ws.getListOfOtherUsername(),
-		})
+		return c.File("/assets/index.html")
 	}
 }
 
@@ -95,13 +118,13 @@ func (ws *WebServer) signNewUserHandler(c echo.Context) error {
 
 		select {
 		case <-ws.peerStatus.DoneCh:
-			return c.Render(http.StatusOK, "index", indexTemplate{
+			return sendJSONString(c, &okSignToFrontend{
 				Username: ws.peerStatus.CurrentUsername,
 				Members:  ws.getListOfOtherUsername(),
 			})
 
 		case <-ws.peerStatus.InvalidCh:
-			return c.Render(http.StatusOK, "login", loginTemplate{
+			return sendJSONString(c, &errorSignToFrontend{
 				IsError:      true,
 				ErrorMessage: "Username already in use, please retry with another one!",
 			})
@@ -116,6 +139,6 @@ func (ws *WebServer) sendMessageHandler(c echo.Context) error {
 		return c.NoContent(http.StatusForbidden)
 	} else {
 		ws.peerStatus.RawMessageCh <- c.FormValue("message")
-		return c.HTML(http.StatusOK, "Message sent!")
+		return c.NoContent(http.StatusOK)
 	}
 }

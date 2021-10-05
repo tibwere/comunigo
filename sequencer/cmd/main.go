@@ -34,8 +34,6 @@ func main() {
 	go seqServer.LoadMembers(membersCh, grpcServer, &wg)
 	wg.Wait()
 
-	log.Println("Sono uscito da qui")
-
 	wg.Add(2)
 	go seqServer.OrderMessages(config.SeqPort)
 	go grpchandler.ServePeers(seqServer)

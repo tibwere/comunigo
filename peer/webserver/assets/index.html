@@ -1,4 +1,3 @@
-{{define "index"}}
 <!doctype html>
 <html lang="en">
     <head>
@@ -8,8 +7,9 @@
 
         <!-- Bootstrap CSS -->
         <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.1.0/dist/css/bootstrap.min.css" rel="stylesheet" integrity="sha384-KyZXEAg3QhqLMpG8r+8fhAXLRk2vvoC2f3B09zVXn8CA5QIVfZOJ3BCsw2P0p/We" crossorigin="anonymous">
+        <script src="https://kit.fontawesome.com/5355752c85.js" crossorigin="anonymous"></script>
 
-        <title>{{.Username}} - comuniGO</title>
+        <title>comuniGO</title>
     </head>
     <body>
         <div class="row mt-4">
@@ -20,44 +20,63 @@
         </div>
         <div class="row">
             <div class="col-2 offset-4 text-center">
-                <h3 class="text-center mt-2">
-                    You: <span class="text-success">{{.Username}}</span>
-                </h3>
+                <h5 class="text-center mt-2">
+                    You: <span class="text-success" id="me"></span>
+                </h5>
             </div>
             <div class="col-2 text-center">
-                <button type="button" class="btn btn-outline-dark" data-bs-toggle="modal" data-bs-target="#otherMembersModal">
+                <button type="button" class="btn btn-outline-dark btn-sm" data-bs-toggle="modal" data-bs-target="#otherMembersModal">
                     Other members
                 </button>
             </div>
         </div>
+        <div class="row mt-4">
+            <div class="col-4 offset-4 text-center">
+                <form id="sendForm">
+                    <div class="form-group mb-4">
+                        <label for="message">Message</label>
+                        <input type="textarea" class="form-control" name="message" id="message" placeholder="Enter new message" required="required">
+                    </div>
+                    <button type="submit" class="btn btn-dark" id="sendBtn">
+                        <i class="fas fa-paper-plane"></i> Send Message
+                    </button>
+                    <div class="alert alert-success mt-3" id="alertMsg" role="alert" style="display: none;">
+                        Messaggio inviato con <strong class="text-success">successo</strong>!
+                    </div>
+                </form>
+            </div>
+        </div>
+        <div class="row mt-4">
+            <h3 class="text-center">Storico messaggi</h3>
+            <div class="col-6 offset-3 text-left">
+                <ul class="list-group" id="messageList">
+                </ul>
+            </div>
+        </div>
 
-<!-- Modal -->
-<div class="modal fade" id="otherMembersModal" tabindex="-1" aria-labelledby="titleLabel" aria-hidden="true">
-    <div class="modal-dialog">
-      <div class="modal-content">
-        <div class="modal-header">
-          <h5 class="modal-title" id="titleLabel">Other members</h5>
-          <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+        <!-- Modal -->
+        <div class="modal fade" id="otherMembersModal" tabindex="-1" aria-labelledby="titleLabel" aria-hidden="true">
+            <div class="modal-dialog">
+            <div class="modal-content">
+                <div class="modal-header">
+                <h5 class="modal-title" id="titleLabel">Other members</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+                <div class="modal-body">
+                    <ul class="list-group" id="memberList">
+                    </ul>
+                </div>
+                <div class="modal-footer">
+                <button type="button" class="btn btn-dark" data-bs-dismiss="modal">Close</button>
+                </div>
+            </div>
+            </div>
         </div>
-        <div class="modal-body">
-            <ul class="list-group">
-                {{range .Members}}
-                <li class="list-group-item">{{.}}</li>
-                {{end}}
-              </ul>
-        </div>
-        <div class="modal-footer">
-          <button type="button" class="btn btn-dark" data-bs-dismiss="modal">Close</button>
-        </div>
-      </div>
-    </div>
-  </div>
 
 
         </div> 
         <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.1.0/dist/js/bootstrap.bundle.min.js" integrity="sha384-U1DAWAznBHeqEIlVSCgzq+c9gqGAJn5c/t99JyeKa9xxaYpSvHU5awsuZVVFIhvj" crossorigin="anonymous"></script>
         <script src="https://code.jquery.com/jquery-3.6.0.min.js" integrity="sha256-/xUj+3OJU5yExlq6GSYGSHk7tPXikynS7ogEvDej/m4=" crossorigin="anonymous"></script>
-        <script src="script.js"></script>
+        <script src="index.js"></script>
     </body>
 </html>
-{{end}}
