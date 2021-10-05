@@ -10,7 +10,6 @@ import (
 	"github.com/labstack/echo/v4"
 	"github.com/labstack/echo/v4/middleware"
 	"gitlab.com/tibwere/comunigo/peer"
-	"gitlab.com/tibwere/comunigo/proto"
 )
 
 const (
@@ -19,20 +18,6 @@ const (
 	RouteList = "/list"
 	RouteRoot = "/"
 )
-
-type errorSignToFrontend struct {
-	IsError      bool
-	ErrorMessage string
-}
-
-type okSignToFrontend struct {
-	Username string
-	Members  []string
-}
-
-type listToFrontend struct {
-	MessageList []*proto.OrderedMessage
-}
 
 type WebServer struct {
 	port          uint16
@@ -63,7 +48,7 @@ func (ws *WebServer) Startup(wg *sync.WaitGroup) {
 	e.Logger.Fatal(e.Start(fmt.Sprintf(":%v", ws.port)))
 }
 
-func sendJSONString(c echo.Context, data interface{}) error {
+func sendJSONString(c echo.Context, data map[string]interface{}) error {
 	jsondata, err := json.Marshal(data)
 	if err != nil {
 		return c.NoContent(http.StatusInternalServerError)
@@ -98,8 +83,8 @@ func (ws *WebServer) updateMessageList(c echo.Context) error {
 			return c.NoContent(http.StatusInternalServerError)
 		}
 
-		return sendJSONString(c, &listToFrontend{
-			MessageList: messages,
+		return sendJSONString(c, map[string]interface{}{
+			"MessageList": messages,
 		})
 	}
 }
@@ -118,15 +103,15 @@ func (ws *WebServer) signNewUserHandler(c echo.Context) error {
 
 		select {
 		case <-ws.peerStatus.DoneCh:
-			return sendJSONString(c, &okSignToFrontend{
-				Username: ws.peerStatus.CurrentUsername,
-				Members:  ws.getListOfOtherUsername(),
+			return sendJSONString(c, map[string]interface{}{
+				"Username": ws.peerStatus.CurrentUsername,
+				"Members":  ws.getListOfOtherUsername(),
 			})
 
 		case <-ws.peerStatus.InvalidCh:
-			return sendJSONString(c, &errorSignToFrontend{
-				IsError:      true,
-				ErrorMessage: "Username already in use, please retry with another one!",
+			return sendJSONString(c, map[string]interface{}{
+				"IsError":      true,
+				"ErrorMessage": "Username already in use, please retry with another one!",
 			})
 		}
 	} else {
