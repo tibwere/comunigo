@@ -16,19 +16,42 @@ type SequencerServer struct {
 	proto.UnimplementedChatServer
 	sequenceNumber uint64
 	seqCh          chan *proto.UnorderedMessage
-	members        []string
+	connections    map[string]chan *proto.OrderedMessage
 	port           uint16
 	chatGroupSize  uint16
 }
 
-func (s *SequencerServer) LoadMembers(membersCh chan string, grpcServer *grpc.Server, wg *sync.WaitGroup) {
+func (s *SequencerServer) LoadMembers(membersCh chan string, grpcServerToGetPeers *grpc.Server, wg *sync.WaitGroup) {
 	defer wg.Done()
 
 	for i := 0; i < int(s.chatGroupSize); i++ {
-		s.members = append(s.members, <-membersCh)
+		currentMember := <-membersCh
+		s.connections[currentMember] = make(chan *proto.OrderedMessage)
+		go s.sendBackMessages(currentMember)
 	}
 
-	grpcServer.GracefulStop()
+	grpcServerToGetPeers.GracefulStop()
+}
+
+func (s *SequencerServer) sendBackMessages(addr string) error {
+	conn, err := grpc.Dial(
+		fmt.Sprintf("%v:%v", addr, s.port),
+		grpc.WithInsecure(),
+		grpc.WithBlock(),
+	)
+	if err != nil {
+		return err
+	}
+	defer conn.Close()
+
+	c := proto.NewChatClient(conn)
+
+	for {
+		_, err = c.SendToPeer(context.Background(), <-s.connections[addr])
+		if err != nil {
+			return err
+		}
+	}
 }
 
 func (s *SequencerServer) SendToSequencer(ctx context.Context, in *proto.UnorderedMessage) (*empty.Empty, error) {
@@ -37,7 +60,7 @@ func (s *SequencerServer) SendToSequencer(ctx context.Context, in *proto.Unorder
 	return &empty.Empty{}, nil
 }
 
-func (s *SequencerServer) OrderMessages(port uint16) {
+func (s *SequencerServer) OrderMessages() {
 	for {
 		unordered := <-s.seqCh
 
@@ -48,45 +71,23 @@ func (s *SequencerServer) OrderMessages(port uint16) {
 		}
 		s.sequenceNumber++
 
-		s.sendBackToPeers(ordered, port)
+		for _, ch := range s.connections {
+			ch <- ordered
+		}
 	}
 }
 
-func NewSequencerserver(port uint16, size uint16) *SequencerServer {
+func NewSequencerServer(port uint16, size uint16) *SequencerServer {
 
 	seq := &SequencerServer{
 		sequenceNumber: 0,
 		seqCh:          make(chan *proto.UnorderedMessage),
-		members:        []string{},
+		connections:    make(map[string]chan *proto.OrderedMessage),
 		port:           port,
 		chatGroupSize:  size,
 	}
 
 	return seq
-}
-
-func (s *SequencerServer) sendBackToPeers(ordered *proto.OrderedMessage, port uint16) error {
-
-	for _, peer := range s.members {
-		conn, err := grpc.Dial(
-			fmt.Sprintf("%v:%v", peer, port),
-			grpc.WithInsecure(),
-			grpc.WithBlock(),
-		)
-		if err != nil {
-			return err
-		}
-		defer conn.Close()
-
-		c := proto.NewChatClient(conn)
-
-		_, err = c.SendToPeer(context.Background(), ordered)
-		if err != nil {
-			return err
-		}
-	}
-
-	return nil
 }
 
 func ServePeers(seqServer *SequencerServer) {

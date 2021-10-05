@@ -26,16 +26,16 @@ func main() {
 		MembersCh: membersCh,
 	}
 
-	seqServer := grpchandler.NewSequencerserver(config.SeqPort, config.ChatGroupSize)
-	grpcServer := grpc.NewServer()
+	seqServer := grpchandler.NewSequencerServer(config.SeqPort, config.ChatGroupSize)
+	grpcServerToGetPeers := grpc.NewServer()
 
 	wg.Add(2)
-	go grpchandler.GetClientsFromRegister(config.RegPort, startupServer, grpcServer, &wg)
-	go seqServer.LoadMembers(membersCh, grpcServer, &wg)
+	go grpchandler.GetClientsFromRegister(config.RegPort, startupServer, grpcServerToGetPeers, &wg)
+	go seqServer.LoadMembers(membersCh, grpcServerToGetPeers, &wg)
 	wg.Wait()
 
 	wg.Add(2)
-	go seqServer.OrderMessages(config.SeqPort)
+	go seqServer.OrderMessages()
 	go grpchandler.ServePeers(seqServer)
 	wg.Wait()
 }
