@@ -2,11 +2,11 @@ package peer
 
 import (
 	"context"
-	"encoding/json"
 	"fmt"
 
 	"github.com/go-redis/redis/v8"
 	"gitlab.com/tibwere/comunigo/proto"
+	"google.golang.org/protobuf/encoding/protojson"
 )
 
 func InitDatastore(addr string) *redis.Client {
@@ -18,29 +18,32 @@ func InitDatastore(addr string) *redis.Client {
 }
 
 func InsertMessage(ds *redis.Client, rootKey string, receivedMessage *proto.OrderedMessage) error {
-	jsonMessage, err := json.Marshal(receivedMessage)
+	mOpt := &protojson.MarshalOptions{
+		Multiline:       false,
+		EmitUnpopulated: true,
+	}
+
+	byteMessage, err := mOpt.Marshal(receivedMessage)
 	if err != nil {
 		return err
 	} else {
-		fmt.Printf("Sto inserendo la chiave %v-%v", rootKey, receivedMessage.GetID())
 
 		return ds.Set(
 			context.Background(),
 			fmt.Sprintf("%v-%v", rootKey, receivedMessage.GetID()),
-			jsonMessage,
+			string(byteMessage),
 			0,
 		).Err()
 	}
 }
 
-func GetMessages(ds *redis.Client, rootKey string, startID uint64) ([]*proto.OrderedMessage, error) {
+func GetMessages(ds *redis.Client, rootKey string, startID uint64) ([]string, error) {
 	currentIndex := startID
-	var messages []*proto.OrderedMessage
-	var mes *proto.OrderedMessage
+	var messages []string
 	ctx := context.Background()
 
 	for {
-		jsonMes, err := ds.Get(
+		mes, err := ds.Get(
 			ctx,
 			fmt.Sprintf("%v-%v", rootKey, currentIndex),
 		).Result()
@@ -50,9 +53,6 @@ func GetMessages(ds *redis.Client, rootKey string, startID uint64) ([]*proto.Ord
 		} else if err != nil {
 			return nil, err
 		} else {
-			mes = &proto.OrderedMessage{}
-			json.Unmarshal([]byte(jsonMes), mes)
-			fmt.Println(mes)
 			messages = append(messages, mes)
 			currentIndex++
 		}
