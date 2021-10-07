@@ -18,7 +18,7 @@ services:
       context: .
       dockerfile: ./dockerfiles/sequencer/Dockerfile
     environment:
-      - SEQ_PORT
+      - CHAT_PORT
       - REG_PORT
       - VERBOSE
       - SIZE
@@ -33,7 +33,7 @@ services:
     environment: 
       - WS_PORT
       - REG_PORT
-      - SEQ_PORT
+      - CHAT_PORT
       - SIZE
       - REG_HOSTNAME
       - SEQ_HOSTNAME

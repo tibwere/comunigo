@@ -19,14 +19,14 @@ func main() {
 	}
 
 	if config.EnableVerbose {
-		log.Printf("Start server on port %v\n", config.SeqPort)
+		log.Printf("Start server on port %v\n", config.ChatPort)
 	}
 
 	startupServer := &grpchandler.StartupSequencerServer{
 		MembersCh: membersCh,
 	}
 
-	seqServer := grpchandler.NewSequencerServer(config.SeqPort, config.ChatGroupSize)
+	seqServer := grpchandler.NewSequencerServer(config.ChatPort, config.ChatGroupSize)
 	grpcServerToGetPeers := grpc.NewServer()
 
 	wg.Add(2)

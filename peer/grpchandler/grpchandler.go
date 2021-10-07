@@ -18,7 +18,7 @@ func New(config *config.PeerConfig, status *peer.Status) *GrpcHandler {
 		registerAddr:  config.RegHostname,
 		registerPort:  config.RegPort,
 		sequencerAddr: config.SeqHostname,
-		sequencerPort: config.SeqPort,
+		sequencerPort: config.ChatPort,
 		peerStatus:    status,
 	}
 }

@@ -2,6 +2,7 @@ package config
 
 import (
 	"errors"
+	"fmt"
 	"os"
 	"strconv"
 	"strings"
@@ -14,7 +15,7 @@ var (
 var (
 	EnvWsPort        = "WS_PORT"
 	EnvRegPort       = "REG_PORT"
-	EnvSeqPort       = "SEQ_PORT"
+	EnvChatPort      = "CHAT_PORT"
 	EnvRegHostname   = "REG_HOSTNAME"
 	EnvSeqHostname   = "SEQ_HOSTNAME"
 	EnvSize          = "SIZE"
@@ -30,7 +31,7 @@ type RegistrationServerConfig struct {
 }
 
 type SequencerServerConfig struct {
-	SeqPort       uint16
+	ChatPort      uint16
 	RegPort       uint16
 	ChatGroupSize uint16
 	EnableVerbose bool
@@ -39,7 +40,7 @@ type SequencerServerConfig struct {
 type PeerConfig struct {
 	WebServerPort uint16
 	RegPort       uint16
-	SeqPort       uint16
+	ChatPort      uint16
 	ChatGroupSize uint16
 	RegHostname   string
 	SeqHostname   string
@@ -58,18 +59,18 @@ func parseUint16FromEnv(envVar string) (uint16, error) {
 		// restituisce comunque un uint64 per cui necessita di cast
 		return uint16(portUint16), nil
 	} else {
-		return 0, ErrEnvNotFound
+		return 0, fmt.Errorf("%v [%v]", ErrEnvNotFound, envVar)
 	}
 }
 
 func SetupSequencer() (*SequencerServerConfig, error) {
 	c := &SequencerServerConfig{}
 
-	val, err := parseUint16FromEnv(EnvSeqPort)
+	val, err := parseUint16FromEnv(EnvChatPort)
 	if err != nil {
 		return c, err
 	}
-	c.SeqPort = val
+	c.ChatPort = val
 
 	val, err = parseUint16FromEnv(EnvRegPort)
 	if err != nil {
@@ -141,11 +142,11 @@ func SetupPeer() (*PeerConfig, error) {
 	}
 	c.RegPort = val
 
-	val, err = parseUint16FromEnv(EnvSeqPort)
+	val, err = parseUint16FromEnv(EnvChatPort)
 	if err != nil {
 		return c, err
 	}
-	c.SeqPort = val
+	c.ChatPort = val
 
 	val, err = parseUint16FromEnv(EnvSize)
 	if err != nil {
