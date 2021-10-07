@@ -4,7 +4,6 @@ import (
 	"fmt"
 	"io"
 	"net"
-	"sync"
 
 	"github.com/golang/protobuf/ptypes/empty"
 	"gitlab.com/tibwere/comunigo/proto"
@@ -32,14 +31,14 @@ func (s *StartupSequencerServer) StartSequencer(stream proto.Registration_StartS
 	}
 }
 
-func GetClientsFromRegister(port uint16, startupServer *StartupSequencerServer, grpcServer *grpc.Server, wg *sync.WaitGroup) {
-	defer wg.Done()
+func GetClientsFromRegister(port uint16, startupServer *StartupSequencerServer, grpcServer *grpc.Server) error {
 
 	lis, err := net.Listen("tcp", fmt.Sprintf(":%v", port))
 	if err != nil {
-		panic(err)
+		return err
 	}
 
 	proto.RegisterRegistrationServer(grpcServer, startupServer)
 	grpcServer.Serve(lis)
+	return nil
 }

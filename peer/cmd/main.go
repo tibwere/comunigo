@@ -1,6 +1,8 @@
 package main
 
 import (
+	"context"
+	"fmt"
 	"log"
 	"sync"
 
@@ -8,19 +10,29 @@ import (
 	"gitlab.com/tibwere/comunigo/peer"
 	"gitlab.com/tibwere/comunigo/peer/grpchandler"
 	"gitlab.com/tibwere/comunigo/peer/webserver"
+	"golang.org/x/sync/errgroup"
 )
 
 func main() {
 	var wg sync.WaitGroup
 
-	config, err := config.SetupPeer()
+	cfg, err := config.SetupPeer()
 	if err != nil {
-		panic(err)
+		log.Fatalf("Unable to load configurations (%v)\n", err)
 	}
 
-	status := peer.Init(config.RedisHostname)
-	webserver := webserver.New(config.WebServerPort, config.ChatGroupSize, status)
-	grpcHandler := grpchandler.New(config, status)
+	status, err := peer.Init(cfg.RedisHostname)
+	if err != nil {
+		log.Fatalf("Unable to initialize status (%v)\n", err)
+	}
+
+	err = config.InitLogger(fmt.Sprintf("peer_%v_main", status.PublicIP))
+	if err != nil {
+		log.Fatalf("Unable to setup log file (%v)\n", err)
+	}
+
+	webserver := webserver.New(cfg.WebServerPort, cfg.ChatGroupSize, status)
+	grpcHandler := grpchandler.New(cfg, status)
 
 	wg.Add(2)
 	go webserver.Startup(&wg)
@@ -32,11 +44,17 @@ func main() {
 			log.Fatalf("Unable to sign to register node")
 		}
 
-		var childWg sync.WaitGroup
-		childWg.Add(2)
-		go grpcHandler.ReceiveMessages(&childWg)
-		go grpcHandler.SendMessages(&childWg)
-		childWg.Wait()
+		errs, _ := errgroup.WithContext(context.Background())
+		errs.Go(func() error {
+			return grpcHandler.ReceiveMessages()
+		})
+		errs.Go(func() error {
+			return grpcHandler.SendMessages()
+		})
+
+		if err = errs.Wait(); err != nil {
+			log.Fatalf("Something went wrong in grpc connections management (%v)", err)
+		}
 	}()
 	wg.Wait()
 }

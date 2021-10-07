@@ -3,7 +3,9 @@ package webserver
 import (
 	"encoding/json"
 	"fmt"
+	"log"
 	"net/http"
+	"os"
 	"strconv"
 	"sync"
 
@@ -33,6 +35,18 @@ func New(exposedPort uint16, size uint16, status *peer.Status) *WebServer {
 	}
 }
 
+func (ws *WebServer) initLogger(e *echo.Echo) {
+	logFile, err := os.OpenFile(
+		fmt.Sprintf("/logs/peer_%v_ws.log", ws.peerStatus.PublicIP),
+		os.O_APPEND|os.O_CREATE|os.O_WRONLY,
+		0666,
+	)
+	if err != nil {
+		log.Fatal(err)
+	}
+	e.Logger.SetOutput(logFile)
+}
+
 func (ws *WebServer) Startup(wg *sync.WaitGroup) {
 	defer wg.Done()
 
@@ -42,6 +56,8 @@ func (ws *WebServer) Startup(wg *sync.WaitGroup) {
 	}))
 	e.Use(middleware.Recover())
 	e.HideBanner = true
+
+	ws.initLogger(e)
 
 	e.Static(RouteRoot, "/assets")
 	e.GET(RouteRoot, ws.mainPageHandler)

@@ -5,7 +5,6 @@ import (
 	"fmt"
 	"log"
 	"net"
-	"sync"
 
 	"github.com/go-redis/redis/v8"
 	"github.com/golang/protobuf/ptypes/empty"
@@ -20,9 +19,7 @@ type ReceiverSequencerServer struct {
 	currentUser string
 }
 
-func (gh *GrpcHandler) SendMessages(wg *sync.WaitGroup) error {
-	defer wg.Done()
-
+func (gh *GrpcHandler) SendMessages() error {
 	conn, err := grpc.Dial(
 		fmt.Sprintf("%v:%v", gh.sequencerAddr, gh.sequencerPort),
 		grpc.WithInsecure(),
@@ -52,9 +49,7 @@ func (s *ReceiverSequencerServer) SendToPeer(ctx context.Context, in *proto.Orde
 	return &empty.Empty{}, nil
 }
 
-func (gh *GrpcHandler) ReceiveMessages(wg *sync.WaitGroup) error {
-	defer wg.Done()
-
+func (gh *GrpcHandler) ReceiveMessages() error {
 	lis, err := net.Listen("tcp", fmt.Sprintf(":%v", gh.sequencerPort))
 	if err != nil {
 		return err

@@ -5,7 +5,6 @@ import (
 	"fmt"
 	"log"
 	"net"
-	"sync"
 
 	"github.com/golang/protobuf/ptypes/empty"
 	"gitlab.com/tibwere/comunigo/proto"
@@ -21,9 +20,7 @@ type SequencerServer struct {
 	chatGroupSize  uint16
 }
 
-func (s *SequencerServer) LoadMembers(membersCh chan string, grpcServerToGetPeers *grpc.Server, wg *sync.WaitGroup) {
-	defer wg.Done()
-
+func (s *SequencerServer) LoadMembers(membersCh chan string, grpcServerToGetPeers *grpc.Server) {
 	for i := 0; i < int(s.chatGroupSize); i++ {
 		currentMember := <-membersCh
 		s.connections[currentMember] = make(chan *proto.OrderedMessage)
@@ -90,13 +87,15 @@ func NewSequencerServer(port uint16, size uint16) *SequencerServer {
 	return seq
 }
 
-func ServePeers(seqServer *SequencerServer) {
+func ServePeers(seqServer *SequencerServer) error {
 	lis, err := net.Listen("tcp", fmt.Sprintf(":%v", seqServer.port))
 	if err != nil {
-		panic(err)
+		return err
 	}
 	grpcServer := grpc.NewServer()
 
 	proto.RegisterChatServer(grpcServer, seqServer)
 	grpcServer.Serve(lis)
+
+	return nil
 }

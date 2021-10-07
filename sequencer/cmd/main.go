@@ -1,41 +1,59 @@
 package main
 
 import (
+	"context"
 	"log"
-	"sync"
 
 	"gitlab.com/tibwere/comunigo/config"
 	"gitlab.com/tibwere/comunigo/sequencer/grpchandler"
+	"golang.org/x/sync/errgroup"
 	"google.golang.org/grpc"
 )
 
 func main() {
-	var wg sync.WaitGroup
 	membersCh := make(chan string)
 
-	config, err := config.SetupSequencer()
+	err := config.InitLogger("sequencer")
+	if err != nil {
+		log.Fatalf("Unable to setup log file (%v)\n", err)
+	}
+
+	cfg, err := config.SetupSequencer()
 	if err != nil {
 		log.Fatalf("Unable to load configurations (%v)\n", err)
 	}
 
-	if config.EnableVerbose {
-		log.Printf("Start server on port %v\n", config.ChatPort)
+	if cfg.EnableVerbose {
+		log.Printf("Start server on port %v\n", cfg.ChatPort)
 	}
 
 	startupServer := &grpchandler.StartupSequencerServer{
 		MembersCh: membersCh,
 	}
 
-	seqServer := grpchandler.NewSequencerServer(config.ChatPort, config.ChatGroupSize)
+	seqServer := grpchandler.NewSequencerServer(cfg.ChatPort, cfg.ChatGroupSize)
 	grpcServerToGetPeers := grpc.NewServer()
 
-	wg.Add(2)
-	go grpchandler.GetClientsFromRegister(config.RegPort, startupServer, grpcServerToGetPeers, &wg)
-	go seqServer.LoadMembers(membersCh, grpcServerToGetPeers, &wg)
-	wg.Wait()
+	errs, _ := errgroup.WithContext(context.Background())
+	errs.Go(func() error {
+		return grpchandler.GetClientsFromRegister(cfg.RegPort, startupServer, grpcServerToGetPeers)
+	})
+	go errs.Go(func() error {
+		seqServer.LoadMembers(membersCh, grpcServerToGetPeers)
+		return nil
+	})
+	if err = errs.Wait(); err != nil {
+		log.Fatalf("Something went wrong while retrieving peer list (%v)\n", err)
+	}
 
-	wg.Add(2)
-	go seqServer.OrderMessages()
-	go grpchandler.ServePeers(seqServer)
-	wg.Wait()
+	errs.Go(func() error {
+		seqServer.OrderMessages()
+		return nil
+	})
+	errs.Go(func() error {
+		return grpchandler.ServePeers(seqServer)
+	})
+	if err = errs.Wait(); err != nil {
+		log.Fatalf("Something went wrong while sending/receiving messages from peer (%v)\n", err)
+	}
 }

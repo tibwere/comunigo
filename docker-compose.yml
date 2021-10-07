@@ -11,6 +11,8 @@ services:
       - SIZE
       - VERBOSE
       - SEQ_HOSTNAME
+    volumes:
+      - ./logs:/logs
 
   # Microservizio sequencer
   sequencer_ms:
@@ -22,6 +24,8 @@ services:
       - REG_PORT
       - VERBOSE
       - SIZE
+    volumes:
+      - ./logs:/logs
 
   # Microservizio peer
   peer_ms:
@@ -43,7 +47,8 @@ services:
     depends_on: 
       - "peer_ds"
     volumes:
-      - ./peer/webserver/assets:/assets
+      - ./peer/webserver/assets:/assets:ro
+      - ./logs:/logs
 
   peer_ds:
     image: "redis:alpine"

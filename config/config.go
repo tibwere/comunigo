@@ -3,6 +3,7 @@ package config
 import (
 	"errors"
 	"fmt"
+	"log"
 	"os"
 	"strconv"
 	"strings"
@@ -46,6 +47,20 @@ type PeerConfig struct {
 	SeqHostname   string
 	RedisHostname string
 	EnableVerbose bool
+}
+
+func InitLogger(name string) error {
+	logFile, err := os.OpenFile(
+		fmt.Sprintf("/logs/%v.log", name),
+		os.O_APPEND|os.O_CREATE|os.O_WRONLY,
+		0666,
+	)
+	if err != nil {
+		return err
+	}
+
+	log.SetOutput(logFile)
+	return nil
 }
 
 func parseUint16FromEnv(envVar string) (uint16, error) {

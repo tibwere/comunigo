@@ -5,7 +5,6 @@ import (
 	"log"
 	"net"
 	"strings"
-	"sync"
 
 	"gitlab.com/tibwere/comunigo/proto"
 	"google.golang.org/grpc"
@@ -55,8 +54,7 @@ func (s *RegistrationServer) isValidUsername(username string) bool {
 	return true
 }
 
-func (s *RegistrationServer) UpdateMembers(grpcServer *grpc.Server, seqAddr string, seqPort uint16, wg *sync.WaitGroup) {
-	defer wg.Done()
+func (s *RegistrationServer) UpdateMembers(grpcServer *grpc.Server, seqAddr string, seqPort uint16) {
 
 	for uint16(len(s.memberInformation)) < s.numberOfClients {
 		info := <-s.newMemberCh
@@ -121,14 +119,14 @@ func NewRegistrationServer(size uint16) *RegistrationServer {
 	}
 }
 
-func ServeSignRequests(exposedPort uint16, regServer *RegistrationServer, grpcServer *grpc.Server, wg *sync.WaitGroup) {
-	defer wg.Done()
+func ServeSignRequests(exposedPort uint16, regServer *RegistrationServer, grpcServer *grpc.Server) error {
 
 	lis, err := net.Listen("tcp", fmt.Sprintf(":%v", exposedPort))
 	if err != nil {
-		panic(err)
+		return err
 	}
 
 	proto.RegisterRegistrationServer(grpcServer, regServer)
 	grpcServer.Serve(lis)
+	return nil
 }
