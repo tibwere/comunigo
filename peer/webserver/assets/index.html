@@ -13,7 +13,7 @@
     </head>
     <body>
         <div class="container">
-            <div class="row mt-2 align-items-center bg-dark text-white p-2">
+            <div class="row mt-2 align-items-center bg-primary text-white p-2">
                 <div class="col-3 offset-1 text-center">
                     <h3 class="text-center">Hi <span class="text-warning" id="me"></span>!</h3>
                 </div>
@@ -21,8 +21,8 @@
                     <h3 class="text-center">Enjoy comuni<strong class="text-warning">GO</strong>!</h3>
                 </div>
                 <div class="col-3 text-center">
-                    <button type="button" class="btn btn-outline-warning btn-sm" data-bs-toggle="modal" data-bs-target="#otherMembersModal">
-                        Other members
+                    <button type="button" class="btn btn-warning btn-sm" data-bs-toggle="modal" data-bs-target="#otherMembersModal">
+                        <strong class="text-primary">Other members</strong>
                     </button>
                 </div>
             </div>
@@ -34,7 +34,7 @@
                             <input type="text" class="form-control" name="message" id="message" placeholder="Enter new message" required="required">
                         </div>
                         <button type="submit" class="btn btn-warning" id="sendBtn">
-                            <i class="fas fa-paper-plane"></i> Send Message
+                            <span class="text-primary"><i class="fas fa-paper-plane"></i>Send Message</span>
                         </button>
                         <div class="alert alert-success mt-3" id="alertMsg" role="alert" style="display: none;">
                             Message <strong class="text-success">successfully</strong> sent!
@@ -44,7 +44,7 @@
             </div>
             <div class="row mt-4">
                 <h3 class="text-center">Message history</h3>
-                <div class="alert alert-warning text-center" role="alert" id="emptyMessageListAlert">
+                <div class="alert alert-info text-center" role="alert" id="emptyMessageListAlert">
                     Messages will be displayed here as soon as they are received
                 </div>
                 <div class="col-6 offset-3 text-left">
@@ -58,7 +58,7 @@
                 <div class="modal-dialog">
                 <div class="modal-content">
                     <div class="modal-header">
-                    <h5 class="modal-title" id="titleLabel">Other members</h5>
+                    <h5 class="modal-title text-primary" id="titleLabel">Other members</h5>
                     <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
                     </div>
                     <div class="modal-body">
@@ -66,7 +66,7 @@
                         </ul>
                     </div>
                     <div class="modal-footer">
-                    <button type="button" class="btn btn-dark" data-bs-dismiss="modal">Close</button>
+                    <button type="button" class="btn btn-warning" data-bs-dismiss="modal"><span class="text-primary">Close</span></button>
                     </div>
                 </div>
                 </div>

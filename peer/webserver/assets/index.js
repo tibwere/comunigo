@@ -4,7 +4,7 @@ $( document ).ready(function() {
     document.title = metadata.Username + " - comuniGO"
 
     $("#me").text(metadata.Username)
-    metadata.Members.forEach(m => $("#memberList").append('<li class="list-group-item">' + m + '</li>'))
+    metadata.Members.forEach(m => $("#memberList").append('<li class="list-group-item list-group-item-warning"><strong class="text-primary">' + m + '</strong></li>'))
     sessionStorage.setItem("index", -1)
 });
 
@@ -61,7 +61,7 @@ setInterval(function(){
                         if (m.From == sessionStorage.getItem("currentUser")) {
                             $("#messageList").append('<li class="list-group-item list-group-item-warning"><strong class="text-warning">(' + m.From + ')</strong> ' + m.Body + '</li>')                    
                         } else {
-                            $("#messageList").append('<li class="list-group-item list-group-item-dark"><strong class="text-secondary">(' + m.From + ')</strong> ' + m.Body + '</li>')
+                            $("#messageList").append('<li class="list-group-item list-group-item-primary"><strong class="text-primary">(' + m.From + ')</strong> ' + m.Body + '</li>')
                         }
                     })
                 }                      
