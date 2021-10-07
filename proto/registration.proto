@@ -8,13 +8,17 @@ import "google/protobuf/empty.proto";
 
 
 service Registration {
-    rpc Sign(ClientInfo) returns (stream ClientInfo);
+    rpc Sign(NewUser) returns (stream ClientInfo);
     rpc StartSequencer(stream ClientInfo) returns (google.protobuf.Empty);
+}
+
+message NewUser {
+    string Username = 1;
 }
 
 message ClientInfo {
     string Username = 1;
-    string Hostname = 2;
+    string Address = 2;
 }
 
 message Empty {}

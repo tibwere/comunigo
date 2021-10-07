@@ -4,7 +4,6 @@ import (
 	"context"
 	"fmt"
 	"io"
-	"os"
 
 	"gitlab.com/tibwere/comunigo/proto"
 	"google.golang.org/grpc"
@@ -51,9 +50,8 @@ func (gh *GrpcHandler) SignToRegister() error {
 
 	for {
 		currUser = <-gh.peerStatus.UsernameCh
-		stream, err := c.Sign(context.Background(), &proto.ClientInfo{
+		stream, err := c.Sign(context.Background(), &proto.NewUser{
 			Username: currUser,
-			Hostname: os.Getenv("HOSTNAME"),
 		})
 		if err != nil {
 			return err

@@ -28,7 +28,7 @@ func (s *StartupSequencerServer) StartSequencer(stream proto.Registration_StartS
 			return err
 		}
 
-		s.MembersCh <- member.GetHostname()
+		s.MembersCh <- member.GetAddress()
 	}
 }
 

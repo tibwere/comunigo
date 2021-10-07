@@ -19,7 +19,7 @@ const _ = grpc.SupportPackageIsVersion7
 //
 // For semantics around ctx use and closing/ending streaming RPCs, please refer to https://pkg.go.dev/google.golang.org/grpc/?tab=doc#ClientConn.NewStream.
 type RegistrationClient interface {
-	Sign(ctx context.Context, in *ClientInfo, opts ...grpc.CallOption) (Registration_SignClient, error)
+	Sign(ctx context.Context, in *NewUser, opts ...grpc.CallOption) (Registration_SignClient, error)
 	StartSequencer(ctx context.Context, opts ...grpc.CallOption) (Registration_StartSequencerClient, error)
 }
 
@@ -31,7 +31,7 @@ func NewRegistrationClient(cc grpc.ClientConnInterface) RegistrationClient {
 	return &registrationClient{cc}
 }
 
-func (c *registrationClient) Sign(ctx context.Context, in *ClientInfo, opts ...grpc.CallOption) (Registration_SignClient, error) {
+func (c *registrationClient) Sign(ctx context.Context, in *NewUser, opts ...grpc.CallOption) (Registration_SignClient, error) {
 	stream, err := c.cc.NewStream(ctx, &Registration_ServiceDesc.Streams[0], "/proto.Registration/Sign", opts...)
 	if err != nil {
 		return nil, err
@@ -101,7 +101,7 @@ func (x *registrationStartSequencerClient) CloseAndRecv() (*empty.Empty, error) 
 // All implementations must embed UnimplementedRegistrationServer
 // for forward compatibility
 type RegistrationServer interface {
-	Sign(*ClientInfo, Registration_SignServer) error
+	Sign(*NewUser, Registration_SignServer) error
 	StartSequencer(Registration_StartSequencerServer) error
 	mustEmbedUnimplementedRegistrationServer()
 }
@@ -110,7 +110,7 @@ type RegistrationServer interface {
 type UnimplementedRegistrationServer struct {
 }
 
-func (UnimplementedRegistrationServer) Sign(*ClientInfo, Registration_SignServer) error {
+func (UnimplementedRegistrationServer) Sign(*NewUser, Registration_SignServer) error {
 	return status.Errorf(codes.Unimplemented, "method Sign not implemented")
 }
 func (UnimplementedRegistrationServer) StartSequencer(Registration_StartSequencerServer) error {
@@ -130,7 +130,7 @@ func RegisterRegistrationServer(s grpc.ServiceRegistrar, srv RegistrationServer)
 }
 
 func _Registration_Sign_Handler(srv interface{}, stream grpc.ServerStream) error {
-	m := new(ClientInfo)
+	m := new(NewUser)
 	if err := stream.RecvMsg(m); err != nil {
 		return err
 	}

@@ -4,11 +4,13 @@ import (
 	"fmt"
 	"log"
 	"net"
+	"strings"
 	"sync"
 
 	"gitlab.com/tibwere/comunigo/proto"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/codes"
+	"google.golang.org/grpc/peer"
 	"google.golang.org/grpc/status"
 )
 
@@ -77,8 +79,11 @@ func (s *RegistrationServer) UpdateMembers(grpcServer *grpc.Server, seqAddr stri
 	grpcServer.GracefulStop()
 }
 
-func (s *RegistrationServer) Sign(in *proto.ClientInfo, stream proto.Registration_SignServer) error {
-	log.Printf("Received request from: %v@%v\n", in.GetUsername(), in.GetHostname())
+func (s *RegistrationServer) Sign(in *proto.NewUser, stream proto.Registration_SignServer) error {
+
+	p, _ := peer.FromContext(stream.Context())
+	peerIP := strings.Split(p.Addr.String(), ":")[0]
+	log.Printf("Received request from: %v@%v\n", in.GetUsername(), peerIP)
 
 	// Crea un canale con cui comprendere se l'username è valido o meno
 	validityCh := make(chan bool)
@@ -86,7 +91,10 @@ func (s *RegistrationServer) Sign(in *proto.ClientInfo, stream proto.Registratio
 	// Invia i metadati relativi al nuovo utente alla goroutine dedicata all'aggiornamento
 	// del datastore
 	s.newMemberCh <- &exchangeInformationFromUpdaterAndHandler{
-		clientInfo:        in,
+		clientInfo: &proto.ClientInfo{
+			Username: in.GetUsername(),
+			Address:  peerIP,
+		},
 		isUsernameValidCh: validityCh,
 	}
 
