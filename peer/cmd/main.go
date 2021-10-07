@@ -4,7 +4,9 @@ import (
 	"context"
 	"fmt"
 	"log"
+	"math/rand"
 	"sync"
+	"time"
 
 	"gitlab.com/tibwere/comunigo/config"
 	"gitlab.com/tibwere/comunigo/peer"
@@ -15,6 +17,8 @@ import (
 
 func main() {
 	var wg sync.WaitGroup
+
+	rand.Seed(time.Now().UnixNano())
 
 	cfg, err := config.SetupPeer()
 	if err != nil {

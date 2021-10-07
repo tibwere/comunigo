@@ -4,7 +4,9 @@ import (
 	"context"
 	"fmt"
 	"log"
+	"math/rand"
 	"net"
+	"time"
 
 	"github.com/go-redis/redis/v8"
 	"github.com/golang/protobuf/ptypes/empty"
@@ -33,9 +35,15 @@ func (gh *GrpcHandler) SendMessages() error {
 	c := proto.NewChatClient(conn)
 
 	for {
+		newMessageBody := <-gh.peerStatus.RawMessageCh
+
+		delay := rand.Intn(3000)
+		log.Printf("Waiting %v millisec ...", delay)
+		time.Sleep(time.Duration(delay) * time.Millisecond)
+
 		_, err := c.SendToSequencer(context.Background(), &proto.UnorderedMessage{
 			From: gh.peerStatus.CurrentUsername,
-			Body: <-gh.peerStatus.RawMessageCh,
+			Body: newMessageBody,
 		})
 		if err != nil {
 			return err
