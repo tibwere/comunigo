@@ -37,8 +37,11 @@ func (ws *WebServer) Startup(wg *sync.WaitGroup) {
 	defer wg.Done()
 
 	e := echo.New()
-	e.Use(middleware.Logger())
+	e.Use(middleware.LoggerWithConfig(middleware.LoggerConfig{
+		Format: "[${time_rfc3339}]: method=${method}, uri=${uri}, status=${status}\n",
+	}))
 	e.Use(middleware.Recover())
+	e.HideBanner = true
 
 	e.Static(RouteRoot, "/assets")
 	e.GET(RouteRoot, ws.mainPageHandler)
