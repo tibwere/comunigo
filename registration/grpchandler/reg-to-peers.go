@@ -54,7 +54,7 @@ func (s *RegistrationServer) isValidUsername(username string) bool {
 	return true
 }
 
-func (s *RegistrationServer) UpdateMembers(grpcServer *grpc.Server, seqAddr string, seqPort uint16) {
+func (s *RegistrationServer) UpdateMembers(grpcServer *grpc.Server, seqAddr string, seqPort uint16, needSequencer bool) {
 
 	for uint16(len(s.memberInformation)) < s.numberOfClients {
 		info := <-s.newMemberCh
@@ -65,7 +65,9 @@ func (s *RegistrationServer) UpdateMembers(grpcServer *grpc.Server, seqAddr stri
 		}
 	}
 
-	InitializeSequencer(seqAddr, seqPort, s.getChatGroupMembers())
+	if needSequencer {
+		InitializeSequencer(seqAddr, seqPort, s.getChatGroupMembers())
+	}
 
 	// Invia un messaggio di sincronizzazione a tutte
 	// le goroutine per inviare la risposta al client

@@ -3,6 +3,7 @@ package main
 import (
 	"context"
 	"log"
+	"os"
 
 	"gitlab.com/tibwere/comunigo/config"
 	"gitlab.com/tibwere/comunigo/sequencer/grpchandler"
@@ -21,6 +22,11 @@ func main() {
 	cfg, err := config.SetupSequencer()
 	if err != nil {
 		log.Fatalf("Unable to load configurations (%v)\n", err)
+	}
+
+	if cfg.TypeOfService != "sequencer" {
+		log.Printf("Chosen modality do not need sequencer, shutdown!")
+		os.Exit(0)
 	}
 
 	if cfg.EnableVerbose {

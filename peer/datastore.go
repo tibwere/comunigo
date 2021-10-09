@@ -3,6 +3,7 @@ package peer
 import (
 	"context"
 	"fmt"
+	"log"
 
 	"github.com/go-redis/redis/v8"
 	"gitlab.com/tibwere/comunigo/proto"
@@ -17,44 +18,47 @@ func InitDatastore(addr string) *redis.Client {
 	})
 }
 
-func InsertMessage(ds *redis.Client, rootKey string, receivedMessage *proto.OrderedMessage) error {
-	mOpt := &protojson.MarshalOptions{
+func InsertSequencerMessage(ds *redis.Client, key string, message *proto.SequencerMessage) error {
+
+	enc := &protojson.MarshalOptions{
 		Multiline:       false,
 		EmitUnpopulated: true,
 	}
 
-	byteMessage, err := mOpt.Marshal(receivedMessage)
+	byteMessage, err := enc.Marshal(message)
 	if err != nil {
 		return err
 	} else {
-
-		return ds.Set(
-			context.Background(),
-			fmt.Sprintf("%v-%v", rootKey, receivedMessage.GetID()),
-			string(byteMessage),
-			0,
-		).Err()
+		return ds.RPush(context.Background(), key, string(byteMessage)).Err()
 	}
 }
 
-func GetMessages(ds *redis.Client, rootKey string) ([]string, error) {
-	currentIndex := 0
+func InsertScalarClockMessage(ds *redis.Client, key string, message *proto.ScalarClockMessage) error {
+
+	enc := &protojson.MarshalOptions{
+		Multiline:       false,
+		EmitUnpopulated: true,
+	}
+
+	byteMessage, err := enc.Marshal(message)
+	if err != nil {
+		return err
+	} else {
+		log.Printf("RPush into redis at key %v\n", key)
+		return ds.RPush(context.Background(), key, string(byteMessage)).Err()
+	}
+}
+
+func GetMessages(ds *redis.Client, key string) ([]string, error) {
 	var messages []string
 	ctx := context.Background()
 
-	for {
-		mes, err := ds.Get(
-			ctx,
-			fmt.Sprintf("%v-%v", rootKey, currentIndex),
-		).Result()
-
-		if err == redis.Nil {
-			return messages, nil
-		} else if err != nil {
-			return nil, err
-		} else {
-			messages = append(messages, mes)
-			currentIndex++
-		}
+	messages, err := ds.LRange(ctx, key, 0, -1).Result()
+	if err != nil {
+		return messages, err
 	}
+
+	log.Printf("Found %v messages into redis to deliver to frontend (key: %v)\n", len(messages), key)
+
+	return messages, nil
 }

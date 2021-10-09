@@ -10,7 +10,9 @@ import (
 
 	"gitlab.com/tibwere/comunigo/config"
 	"gitlab.com/tibwere/comunigo/peer"
-	"gitlab.com/tibwere/comunigo/peer/grpchandler"
+	"gitlab.com/tibwere/comunigo/peer/grpchandler/p2p/scalar"
+	"gitlab.com/tibwere/comunigo/peer/grpchandler/reg"
+	"gitlab.com/tibwere/comunigo/peer/grpchandler/seq"
 	"gitlab.com/tibwere/comunigo/peer/webserver"
 	"golang.org/x/sync/errgroup"
 )
@@ -35,30 +37,57 @@ func main() {
 		log.Fatalf("Unable to setup log file (%v)\n", err)
 	}
 
-	webserver := webserver.New(cfg.WebServerPort, cfg.ChatGroupSize, status)
-	grpcHandler := grpchandler.New(cfg, status)
-
 	wg.Add(2)
-	go webserver.Startup(&wg)
+	ws := webserver.New(cfg.WebServerPort, cfg.ChatGroupSize, status)
+	go ws.Startup(&wg)
 	go func() {
 		defer wg.Done()
 
-		err = grpcHandler.SignToRegister()
+		regH := reg.NewToRegisterGRPCHandler(cfg.RegHostname, cfg.RegPort, status)
+		err = regH.SignToRegister()
 		if err != nil {
 			log.Fatalf("Unable to sign to register node")
 		}
 
-		errs, _ := errgroup.WithContext(context.Background())
-		errs.Go(func() error {
-			return grpcHandler.ReceiveMessages()
-		})
-		errs.Go(func() error {
-			return grpcHandler.SendMessages()
-		})
-
-		if err = errs.Wait(); err != nil {
-			log.Fatalf("Something went wrong in grpc connections management (%v)", err)
+		switch cfg.TypeOfService {
+		case "sequencer":
+			sequencerHandler(cfg.SeqHostname, cfg.ChatPort, status)
+		case "scalar":
+			scalarHandler(cfg.ChatPort, status)
+		case "vectorial":
+			vectorialHandler()
+		default:
+			log.Fatalf("TOS not expected")
 		}
+
 	}()
 	wg.Wait()
+}
+
+func sequencerHandler(addr string, port uint16, status *peer.Status) {
+	seqH := seq.NewToSequencerGRPCHandler(addr, port, status)
+	errs, _ := errgroup.WithContext(context.Background())
+
+	errs.Go(func() error {
+		return seqH.ReceiveMessages()
+	})
+	errs.Go(func() error {
+		return seqH.SendMessagesToSequencer()
+	})
+
+	if err := errs.Wait(); err != nil {
+		log.Fatalf("Something went wrong in grpc connections management (%v)", err)
+	}
+}
+
+func scalarHandler(port uint16, status *peer.Status) {
+	p2pScalarH := scalar.NewP2PScalarGRPCHandler(port, status)
+
+	go p2pScalarH.ConnectToPeers()
+	go p2pScalarH.MultiplexMessages()
+	go p2pScalarH.ReceiveMessages()
+}
+
+func vectorialHandler() {
+
 }

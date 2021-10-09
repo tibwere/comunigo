@@ -22,6 +22,7 @@ var (
 	EnvSize          = "SIZE"
 	EnvEnableVerbose = "VERBOSE"
 	EnvRedisHostname = "REDIS_HOSTNAME"
+	EnvTypeOfService = "TOS"
 )
 
 type RegistrationServerConfig struct {
@@ -29,6 +30,7 @@ type RegistrationServerConfig struct {
 	ChatGroupSize uint16
 	EnableVerbose bool
 	SeqHostname   string
+	TypeOfService string
 }
 
 type SequencerServerConfig struct {
@@ -36,6 +38,7 @@ type SequencerServerConfig struct {
 	RegPort       uint16
 	ChatGroupSize uint16
 	EnableVerbose bool
+	TypeOfService string
 }
 
 type PeerConfig struct {
@@ -47,6 +50,7 @@ type PeerConfig struct {
 	SeqHostname   string
 	RedisHostname string
 	EnableVerbose bool
+	TypeOfService string
 }
 
 func InitLogger(name string) error {
@@ -110,6 +114,13 @@ func SetupSequencer() (*SequencerServerConfig, error) {
 		}
 	}
 
+	tos, isPresent := os.LookupEnv(EnvTypeOfService)
+	if !isPresent {
+		return c, fmt.Errorf("%v [TOS]", ErrEnvNotFound)
+	} else {
+		c.TypeOfService = strings.ToLower(tos)
+	}
+
 	return c, nil
 }
 
@@ -144,6 +155,13 @@ func SetupRegistrationServer() (*RegistrationServerConfig, error) {
 		return c, ErrEnvNotFound
 	}
 	c.SeqHostname = rhost
+
+	tos, isPresent := os.LookupEnv(EnvTypeOfService)
+	if !isPresent {
+		return c, fmt.Errorf("%v [TOS]", ErrEnvNotFound)
+	} else {
+		c.TypeOfService = strings.ToLower(tos)
+	}
 
 	return c, nil
 }
@@ -203,6 +221,13 @@ func SetupPeer() (*PeerConfig, error) {
 		return c, ErrEnvNotFound
 	}
 	c.RedisHostname = rhost
+
+	tos, isPresent := os.LookupEnv(EnvTypeOfService)
+	if !isPresent {
+		return c, fmt.Errorf("%v [TOS]", ErrEnvNotFound)
+	} else {
+		c.TypeOfService = strings.ToLower(tos)
+	}
 
 	return c, nil
 }

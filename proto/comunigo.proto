@@ -1,0 +1,36 @@
+syntax = "proto3";
+
+option go_package = "gitlab.com/tibwere/comunigo/proto";
+
+package proto;
+
+import "google/protobuf/empty.proto";
+
+service Comunigo {
+    rpc SendFromPeerToSequencer(RawMessage) returns (google.protobuf.Empty);
+    rpc SendFromSequencerToPeer(SequencerMessage) returns (google.protobuf.Empty);
+    rpc SendUpdateP2PScalar(ScalarClockMessage) returns (google.protobuf.Empty);
+    rpc SendAckP2PScalar(ScalarClockAck) returns (google.protobuf.Empty);
+}
+
+message RawMessage {
+    string From = 1;
+    string Body = 2;
+}
+
+message SequencerMessage {
+    uint64 SequenceNumber = 1;
+    string From = 2;
+    string Body = 3;
+}
+
+message ScalarClockMessage {
+    uint64 ScalarClock = 1;
+    string From = 2;
+    string Body = 3;
+}
+
+message ScalarClockAck {
+    uint64 ScalarClock = 1;
+    string From = 2;    
+}

@@ -12,10 +12,10 @@ import (
 )
 
 type SequencerServer struct {
-	proto.UnimplementedChatServer
+	proto.UnimplementedComunigoServer
 	sequenceNumber uint64
-	seqCh          chan *proto.UnorderedMessage
-	connections    map[string]chan *proto.OrderedMessage
+	seqCh          chan *proto.RawMessage
+	connections    map[string]chan *proto.SequencerMessage
 	port           uint16
 	chatGroupSize  uint16
 }
@@ -23,7 +23,7 @@ type SequencerServer struct {
 func (s *SequencerServer) LoadMembers(membersCh chan string, grpcServerToGetPeers *grpc.Server) {
 	for i := 0; i < int(s.chatGroupSize); i++ {
 		currentMember := <-membersCh
-		s.connections[currentMember] = make(chan *proto.OrderedMessage)
+		s.connections[currentMember] = make(chan *proto.SequencerMessage)
 		go s.sendBackMessages(currentMember)
 	}
 
@@ -41,17 +41,17 @@ func (s *SequencerServer) sendBackMessages(addr string) error {
 	}
 	defer conn.Close()
 
-	c := proto.NewChatClient(conn)
+	c := proto.NewComunigoClient(conn)
 
 	for {
-		_, err = c.SendToPeer(context.Background(), <-s.connections[addr])
+		_, err = c.SendFromSequencerToPeer(context.Background(), <-s.connections[addr])
 		if err != nil {
 			return err
 		}
 	}
 }
 
-func (s *SequencerServer) SendToSequencer(ctx context.Context, in *proto.UnorderedMessage) (*empty.Empty, error) {
+func (s *SequencerServer) SendFromPeerToSequencer(ctx context.Context, in *proto.RawMessage) (*empty.Empty, error) {
 	log.Printf("Received '%v' from %v\n", in.GetBody(), in.GetFrom())
 	s.seqCh <- in
 	return &empty.Empty{}, nil
@@ -61,10 +61,10 @@ func (s *SequencerServer) OrderMessages() {
 	for {
 		unordered := <-s.seqCh
 
-		ordered := &proto.OrderedMessage{
-			ID:   s.sequenceNumber,
-			From: unordered.GetFrom(),
-			Body: unordered.GetBody(),
+		ordered := &proto.SequencerMessage{
+			SequenceNumber: s.sequenceNumber,
+			From:           unordered.GetFrom(),
+			Body:           unordered.GetBody(),
 		}
 		s.sequenceNumber++
 
@@ -78,8 +78,8 @@ func NewSequencerServer(port uint16, size uint16) *SequencerServer {
 
 	seq := &SequencerServer{
 		sequenceNumber: 0,
-		seqCh:          make(chan *proto.UnorderedMessage),
-		connections:    make(map[string]chan *proto.OrderedMessage),
+		seqCh:          make(chan *proto.RawMessage),
+		connections:    make(map[string]chan *proto.SequencerMessage),
 		port:           port,
 		chatGroupSize:  size,
 	}
@@ -94,7 +94,7 @@ func ServePeers(seqServer *SequencerServer) error {
 	}
 	grpcServer := grpc.NewServer()
 
-	proto.RegisterChatServer(grpcServer, seqServer)
+	proto.RegisterComunigoServer(grpcServer, seqServer)
 	grpcServer.Serve(lis)
 
 	return nil

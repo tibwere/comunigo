@@ -30,7 +30,7 @@ func main() {
 
 	errs, _ := errgroup.WithContext(context.Background())
 	errs.Go(func() error {
-		regServer.UpdateMembers(grpcServer, cfg.SeqHostname, cfg.RegPort)
+		regServer.UpdateMembers(grpcServer, cfg.SeqHostname, cfg.RegPort, cfg.TypeOfService == "sequencer")
 		return nil
 	})
 	errs.Go(func() error {

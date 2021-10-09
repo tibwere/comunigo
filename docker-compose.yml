@@ -11,6 +11,7 @@ services:
       - SIZE
       - VERBOSE
       - SEQ_HOSTNAME
+      - TOS
     volumes:
       - ./logs:/logs
 
@@ -24,6 +25,7 @@ services:
       - REG_PORT
       - VERBOSE
       - SIZE
+      - TOS
     volumes:
       - ./logs:/logs
 
@@ -43,6 +45,7 @@ services:
       - SEQ_HOSTNAME
       - REDIS_HOSTNAME
       - VERBOSE
+      - TOS
     scale: $SIZE
     depends_on: 
       - "peer_ds"

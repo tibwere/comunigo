@@ -78,9 +78,7 @@ func sendJSONString(c echo.Context, data interface{}) error {
 func (ws *WebServer) getListOfOtherUsername() []string {
 	var usernames []string
 	for _, member := range ws.peerStatus.Members {
-		if member.GetUsername() != ws.peerStatus.CurrentUsername {
-			usernames = append(usernames, member.GetUsername())
-		}
+		usernames = append(usernames, member.GetUsername())
 	}
 
 	return usernames

@@ -1,4 +1,4 @@
-package grpchandler
+package reg
 
 import (
 	"context"
@@ -11,7 +11,7 @@ import (
 	"google.golang.org/grpc/status"
 )
 
-func (gh *GrpcHandler) getOtherMembers(stream proto.Registration_SignClient) (bool, error) {
+func (h *ToRegisterGRPCHandler) getOtherMembers(currUser string, stream proto.Registration_SignClient) (bool, error) {
 	for {
 		member, err := stream.Recv()
 
@@ -22,22 +22,24 @@ func (gh *GrpcHandler) getOtherMembers(stream proto.Registration_SignClient) (bo
 		if err != nil {
 			errStatus, _ := status.FromError(err)
 			if codes.InvalidArgument == errStatus.Code() {
-				gh.peerStatus.InvalidCh <- true
+				h.peerStatus.InvalidCh <- true
 				return true, nil
 			} else {
 				return false, err
 			}
 		}
 
-		gh.peerStatus.Members = append(gh.peerStatus.Members, member)
+		if currUser != member.GetUsername() {
+			h.peerStatus.Members = append(h.peerStatus.Members, member)
+		}
 	}
 }
 
-func (gh *GrpcHandler) SignToRegister() error {
+func (h *ToRegisterGRPCHandler) SignToRegister() error {
 	var currUser string
 
 	conn, err := grpc.Dial(
-		fmt.Sprintf("%v:%v", gh.registerAddr, gh.registerPort),
+		fmt.Sprintf("%v:%v", h.registerAddr, h.registerPort),
 		grpc.WithInsecure(),
 		grpc.WithBlock(),
 	)
@@ -49,7 +51,7 @@ func (gh *GrpcHandler) SignToRegister() error {
 	c := proto.NewRegistrationClient(conn)
 
 	for {
-		currUser = <-gh.peerStatus.UsernameCh
+		currUser = <-h.peerStatus.UsernameCh
 		stream, err := c.Sign(context.Background(), &proto.NewUser{
 			Username: currUser,
 		})
@@ -57,14 +59,14 @@ func (gh *GrpcHandler) SignToRegister() error {
 			return err
 		}
 
-		loopAgain, err := gh.getOtherMembers(stream)
+		loopAgain, err := h.getOtherMembers(currUser, stream)
 		if err != nil {
 			return nil
 		}
 
 		if !loopAgain {
-			gh.peerStatus.CurrentUsername = currUser
-			gh.peerStatus.DoneCh <- true
+			h.peerStatus.CurrentUsername = currUser
+			h.peerStatus.DoneCh <- true
 			return nil
 		}
 	}
