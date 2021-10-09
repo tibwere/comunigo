@@ -5,11 +5,13 @@ $( document ).ready(function() {
 
     $("#me").text(metadata.Username)
     metadata.Members.forEach(m => $("#memberList").append('<li class="list-group-item list-group-item-warning"><strong class="text-primary">' + m + '</strong></li>'))
-    sessionStorage.setItem("index", -1)
 });
 
 $("#sendForm").submit(function (e) { 
-    e.preventDefault();  
+    e.preventDefault(); 
+    
+    $("#sendBtn").empty();
+    $("#sendBtn").append('<span class="text-success"><i class="fas fa-check"></i> Message succesfully sent</span>')
 
     $.ajax({
         type: "POST",
@@ -19,26 +21,23 @@ $("#sendForm").submit(function (e) {
         },
         success: function (response) {
 
-            $("#message").text('')
-
-            $("#alertMsg").fadeIn()
+            $("#message").val('')
             setTimeout(function(){
-                $("#alertMsg").fadeOut()
+                $("#sendBtn").empty();
+                $("#sendBtn").append('<span class="text-primary"><i class="fas fa-paper-plane"></i> Send Message</span>')
             }, 1500)            
         }
     });
 });
 
-setInterval(function(){
-    var index = sessionStorage.getItem("index")
+$("#reloadMessagesForm").submit(function (e) { 
+    e.preventDefault();
+
     var messages = []
 
     $.ajax({
         type: "POST",
         url: "list",
-        data: {
-            "next" : parseInt(index) + 1
-        },
         success: function (response) {
             arrayOfJSONMessages = $.parseJSON(response)
 
@@ -47,25 +46,21 @@ setInterval(function(){
                 $.each(arrayOfJSONMessages, function(_, elem) {
                     messages.push($.parseJSON(elem))
                 })
-                highestReceivedID = messages.at(-1).ID
 
-                if (index < highestReceivedID) {
+                $("#emptyMessageListAlert").fadeOut(200)
+                $("#messageList").empty()
 
-                    if (index == -1) {
-                        $("#emptyMessageListAlert").fadeOut(200)
+                $.each(messages, function(i, m) {
+                    console.log("New! [ID: " + m.ID + ", From: " + m.From + ", Body: " + m.Body + "]")
+                    if (m.From == sessionStorage.getItem("currentUser")) {
+                        $("#messageList").append('<li class="list-group-item list-group-item-warning"><strong class="text-warning">(' + m.From + ')</strong> ' + m.Body + '</li>')                    
+                    } else {
+                        $("#messageList").append('<li class="list-group-item list-group-item-primary"><strong class="text-primary">(' + m.From + ')</strong> ' + m.Body + '</li>')
                     }
-
-                    sessionStorage.setItem("index", highestReceivedID)
-                    $.each(messages, function(i, m) {
-                        console.log("New! [ID: " + m.ID + ", From: " + m.From + ", Body: " + m.Body + "]")
-                        if (m.From == sessionStorage.getItem("currentUser")) {
-                            $("#messageList").append('<li class="list-group-item list-group-item-warning"><strong class="text-warning">(' + m.From + ')</strong> ' + m.Body + '</li>')                    
-                        } else {
-                            $("#messageList").append('<li class="list-group-item list-group-item-primary"><strong class="text-primary">(' + m.From + ')</strong> ' + m.Body + '</li>')
-                        }
-                    })
-                }                      
-            }
+                })
+            }                      
         }
-    });
-}, 2000)
+    });  
+});    
+    
+

@@ -37,8 +37,8 @@ func InsertMessage(ds *redis.Client, rootKey string, receivedMessage *proto.Orde
 	}
 }
 
-func GetMessages(ds *redis.Client, rootKey string, startID uint64) ([]string, error) {
-	currentIndex := startID
+func GetMessages(ds *redis.Client, rootKey string) ([]string, error) {
+	currentIndex := 0
 	var messages []string
 	ctx := context.Background()
 

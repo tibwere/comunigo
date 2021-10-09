@@ -6,7 +6,6 @@ import (
 	"log"
 	"net/http"
 	"os"
-	"strconv"
 	"sync"
 
 	"github.com/labstack/echo/v4"
@@ -92,12 +91,7 @@ func (ws *WebServer) updateMessageList(c echo.Context) error {
 	if ws.peerStatus.CurrentUsername == "" {
 		return c.NoContent(http.StatusForbidden)
 	} else {
-		nextIndex, err := strconv.ParseUint(c.FormValue("next"), 10, 16)
-		if err != nil {
-			return c.NoContent(http.StatusInternalServerError)
-		}
-
-		messages, err := peer.GetMessages(ws.peerStatus.Datastore, ws.peerStatus.CurrentUsername, nextIndex)
+		messages, err := peer.GetMessages(ws.peerStatus.Datastore, ws.peerStatus.CurrentUsername)
 		if err != nil {
 			return c.NoContent(http.StatusInternalServerError)
 		}
