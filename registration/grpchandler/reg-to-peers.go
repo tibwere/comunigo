@@ -14,7 +14,7 @@ import (
 )
 
 type exchangeInformationFromUpdaterAndHandler struct {
-	clientInfo        *proto.ClientInfo
+	clientInfo        *proto.PeerInfo
 	isUsernameValidCh chan bool
 }
 
@@ -25,8 +25,8 @@ type RegistrationServer struct {
 	numberOfClients   uint16
 }
 
-func (s *RegistrationServer) getChatGroupMembers() []*proto.ClientInfo {
-	var members []*proto.ClientInfo
+func (s *RegistrationServer) getChatGroupMembers() []*proto.PeerInfo {
+	var members []*proto.PeerInfo
 
 	for _, info := range s.memberInformation {
 		members = append(members, info.clientInfo)
@@ -91,7 +91,7 @@ func (s *RegistrationServer) Sign(in *proto.NewUser, stream proto.Registration_S
 	// Invia i metadati relativi al nuovo utente alla goroutine dedicata all'aggiornamento
 	// del datastore
 	s.newMemberCh <- &exchangeInformationFromUpdaterAndHandler{
-		clientInfo: &proto.ClientInfo{
+		clientInfo: &proto.PeerInfo{
 			Username: in.GetUsername(),
 			Address:  peerIP,
 		},

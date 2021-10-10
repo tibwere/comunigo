@@ -5,11 +5,10 @@ import (
 
 	"gitlab.com/tibwere/comunigo/peer"
 	"gitlab.com/tibwere/comunigo/proto"
-	"google.golang.org/protobuf/encoding/protojson"
 )
 
 type P2PScalarGRPCHandler struct {
-	*proto.UnimplementedComunigoServer
+	proto.UnimplementedComunigoServer
 	comunicationPort  uint16
 	peerStatus        *peer.Status
 	lockScalar        sync.Mutex
@@ -17,7 +16,6 @@ type P2PScalarGRPCHandler struct {
 	scalarMessagesChs []chan *proto.ScalarClockMessage
 	scalarAcksChs     []chan *proto.ScalarClockAck
 	pendingMsg        *PendingMessages
-	encoder           *protojson.MarshalOptions
 }
 
 func NewP2PScalarGRPCHandler(port uint16, status *peer.Status) *P2PScalarGRPCHandler {
@@ -29,10 +27,6 @@ func NewP2PScalarGRPCHandler(port uint16, status *peer.Status) *P2PScalarGRPCHan
 		scalarMessagesChs: []chan *proto.ScalarClockMessage{},
 		scalarAcksChs:     []chan *proto.ScalarClockAck{},
 		pendingMsg:        InitPendingMessagesList(status.Members, status.CurrentUsername),
-		encoder: &protojson.MarshalOptions{
-			Multiline:       false,
-			EmitUnpopulated: true,
-		},
 	}
 
 	for i := 0; i < len(m.peerStatus.Members); i++ {

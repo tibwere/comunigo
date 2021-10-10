@@ -8,7 +8,7 @@ import (
 	"google.golang.org/grpc"
 )
 
-func InitializeSequencer(addr string, port uint16, members []*proto.ClientInfo) error {
+func InitializeSequencer(addr string, port uint16, members []*proto.PeerInfo) error {
 
 	conn, err := grpc.Dial(
 		fmt.Sprintf("%v:%v", addr, port),
@@ -22,7 +22,7 @@ func InitializeSequencer(addr string, port uint16, members []*proto.ClientInfo) 
 
 	c := proto.NewRegistrationClient(conn)
 
-	stream, err := c.StartSequencer(context.Background())
+	stream, err := c.ExchangePeerInfoFromRegToSeq(context.Background())
 	if err != nil {
 		return err
 	}

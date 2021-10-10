@@ -6,7 +6,7 @@ import (
 )
 
 type ToSequencerGRPCHandler struct {
-	*proto.UnimplementedComunigoServer
+	proto.UnimplementedComunigoServer
 	sequencerAddr    string
 	comunicationPort uint16
 	peerStatus       *peer.Status

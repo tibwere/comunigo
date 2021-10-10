@@ -16,7 +16,7 @@ type PendingMessages struct {
 	otherFroms      []string
 }
 
-func InitPendingMessagesList(allMembers []*proto.ClientInfo, currUser string) *PendingMessages {
+func InitPendingMessagesList(allMembers []*proto.PeerInfo, currUser string) *PendingMessages {
 	pm := &PendingMessages{
 		lock:            &sync.Mutex{},
 		queue:           []*proto.ScalarClockMessage{},

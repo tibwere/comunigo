@@ -7,7 +7,7 @@ import (
 
 type Status struct {
 	CurrentUsername string
-	Members         []*proto.ClientInfo
+	Members         []*proto.PeerInfo
 	Datastore       *redis.Client
 	UsernameCh      chan string
 	InvalidCh       chan bool
@@ -23,7 +23,7 @@ func Init(redisAddr string) (*Status, error) {
 	} else {
 		return &Status{
 			CurrentUsername: "",
-			Members:         []*proto.ClientInfo{},
+			Members:         []*proto.PeerInfo{},
 			Datastore:       InitDatastore(redisAddr),
 			UsernameCh:      make(chan string),
 			InvalidCh:       make(chan bool),

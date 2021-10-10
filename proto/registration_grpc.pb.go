@@ -20,7 +20,7 @@ const _ = grpc.SupportPackageIsVersion7
 // For semantics around ctx use and closing/ending streaming RPCs, please refer to https://pkg.go.dev/google.golang.org/grpc/?tab=doc#ClientConn.NewStream.
 type RegistrationClient interface {
 	Sign(ctx context.Context, in *NewUser, opts ...grpc.CallOption) (Registration_SignClient, error)
-	StartSequencer(ctx context.Context, opts ...grpc.CallOption) (Registration_StartSequencerClient, error)
+	ExchangePeerInfoFromRegToSeq(ctx context.Context, opts ...grpc.CallOption) (Registration_ExchangePeerInfoFromRegToSeqClient, error)
 }
 
 type registrationClient struct {
@@ -47,7 +47,7 @@ func (c *registrationClient) Sign(ctx context.Context, in *NewUser, opts ...grpc
 }
 
 type Registration_SignClient interface {
-	Recv() (*ClientInfo, error)
+	Recv() (*PeerInfo, error)
 	grpc.ClientStream
 }
 
@@ -55,38 +55,38 @@ type registrationSignClient struct {
 	grpc.ClientStream
 }
 
-func (x *registrationSignClient) Recv() (*ClientInfo, error) {
-	m := new(ClientInfo)
+func (x *registrationSignClient) Recv() (*PeerInfo, error) {
+	m := new(PeerInfo)
 	if err := x.ClientStream.RecvMsg(m); err != nil {
 		return nil, err
 	}
 	return m, nil
 }
 
-func (c *registrationClient) StartSequencer(ctx context.Context, opts ...grpc.CallOption) (Registration_StartSequencerClient, error) {
-	stream, err := c.cc.NewStream(ctx, &Registration_ServiceDesc.Streams[1], "/proto.Registration/StartSequencer", opts...)
+func (c *registrationClient) ExchangePeerInfoFromRegToSeq(ctx context.Context, opts ...grpc.CallOption) (Registration_ExchangePeerInfoFromRegToSeqClient, error) {
+	stream, err := c.cc.NewStream(ctx, &Registration_ServiceDesc.Streams[1], "/proto.Registration/ExchangePeerInfoFromRegToSeq", opts...)
 	if err != nil {
 		return nil, err
 	}
-	x := &registrationStartSequencerClient{stream}
+	x := &registrationExchangePeerInfoFromRegToSeqClient{stream}
 	return x, nil
 }
 
-type Registration_StartSequencerClient interface {
-	Send(*ClientInfo) error
+type Registration_ExchangePeerInfoFromRegToSeqClient interface {
+	Send(*PeerInfo) error
 	CloseAndRecv() (*empty.Empty, error)
 	grpc.ClientStream
 }
 
-type registrationStartSequencerClient struct {
+type registrationExchangePeerInfoFromRegToSeqClient struct {
 	grpc.ClientStream
 }
 
-func (x *registrationStartSequencerClient) Send(m *ClientInfo) error {
+func (x *registrationExchangePeerInfoFromRegToSeqClient) Send(m *PeerInfo) error {
 	return x.ClientStream.SendMsg(m)
 }
 
-func (x *registrationStartSequencerClient) CloseAndRecv() (*empty.Empty, error) {
+func (x *registrationExchangePeerInfoFromRegToSeqClient) CloseAndRecv() (*empty.Empty, error) {
 	if err := x.ClientStream.CloseSend(); err != nil {
 		return nil, err
 	}
@@ -102,7 +102,7 @@ func (x *registrationStartSequencerClient) CloseAndRecv() (*empty.Empty, error) 
 // for forward compatibility
 type RegistrationServer interface {
 	Sign(*NewUser, Registration_SignServer) error
-	StartSequencer(Registration_StartSequencerServer) error
+	ExchangePeerInfoFromRegToSeq(Registration_ExchangePeerInfoFromRegToSeqServer) error
 	mustEmbedUnimplementedRegistrationServer()
 }
 
@@ -113,8 +113,8 @@ type UnimplementedRegistrationServer struct {
 func (UnimplementedRegistrationServer) Sign(*NewUser, Registration_SignServer) error {
 	return status.Errorf(codes.Unimplemented, "method Sign not implemented")
 }
-func (UnimplementedRegistrationServer) StartSequencer(Registration_StartSequencerServer) error {
-	return status.Errorf(codes.Unimplemented, "method StartSequencer not implemented")
+func (UnimplementedRegistrationServer) ExchangePeerInfoFromRegToSeq(Registration_ExchangePeerInfoFromRegToSeqServer) error {
+	return status.Errorf(codes.Unimplemented, "method ExchangePeerInfoFromRegToSeq not implemented")
 }
 func (UnimplementedRegistrationServer) mustEmbedUnimplementedRegistrationServer() {}
 
@@ -138,7 +138,7 @@ func _Registration_Sign_Handler(srv interface{}, stream grpc.ServerStream) error
 }
 
 type Registration_SignServer interface {
-	Send(*ClientInfo) error
+	Send(*PeerInfo) error
 	grpc.ServerStream
 }
 
@@ -146,30 +146,30 @@ type registrationSignServer struct {
 	grpc.ServerStream
 }
 
-func (x *registrationSignServer) Send(m *ClientInfo) error {
+func (x *registrationSignServer) Send(m *PeerInfo) error {
 	return x.ServerStream.SendMsg(m)
 }
 
-func _Registration_StartSequencer_Handler(srv interface{}, stream grpc.ServerStream) error {
-	return srv.(RegistrationServer).StartSequencer(&registrationStartSequencerServer{stream})
+func _Registration_ExchangePeerInfoFromRegToSeq_Handler(srv interface{}, stream grpc.ServerStream) error {
+	return srv.(RegistrationServer).ExchangePeerInfoFromRegToSeq(&registrationExchangePeerInfoFromRegToSeqServer{stream})
 }
 
-type Registration_StartSequencerServer interface {
+type Registration_ExchangePeerInfoFromRegToSeqServer interface {
 	SendAndClose(*empty.Empty) error
-	Recv() (*ClientInfo, error)
+	Recv() (*PeerInfo, error)
 	grpc.ServerStream
 }
 
-type registrationStartSequencerServer struct {
+type registrationExchangePeerInfoFromRegToSeqServer struct {
 	grpc.ServerStream
 }
 
-func (x *registrationStartSequencerServer) SendAndClose(m *empty.Empty) error {
+func (x *registrationExchangePeerInfoFromRegToSeqServer) SendAndClose(m *empty.Empty) error {
 	return x.ServerStream.SendMsg(m)
 }
 
-func (x *registrationStartSequencerServer) Recv() (*ClientInfo, error) {
-	m := new(ClientInfo)
+func (x *registrationExchangePeerInfoFromRegToSeqServer) Recv() (*PeerInfo, error) {
+	m := new(PeerInfo)
 	if err := x.ServerStream.RecvMsg(m); err != nil {
 		return nil, err
 	}
@@ -190,8 +190,8 @@ var Registration_ServiceDesc = grpc.ServiceDesc{
 			ServerStreams: true,
 		},
 		{
-			StreamName:    "StartSequencer",
-			Handler:       _Registration_StartSequencer_Handler,
+			StreamName:    "ExchangePeerInfoFromRegToSeq",
+			Handler:       _Registration_ExchangePeerInfoFromRegToSeq_Handler,
 			ClientStreams: true,
 		},
 	},

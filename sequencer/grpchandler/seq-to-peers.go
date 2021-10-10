@@ -8,32 +8,8 @@ import (
 
 	"github.com/golang/protobuf/ptypes/empty"
 	"gitlab.com/tibwere/comunigo/proto"
-	"golang.org/x/sync/errgroup"
 	"google.golang.org/grpc"
 )
-
-type SequencerServer struct {
-	proto.UnimplementedComunigoServer
-	sequenceNumber uint64
-	seqCh          chan *proto.RawMessage
-	connections    map[string]chan *proto.SequencerMessage
-	port           uint16
-	chatGroupSize  uint16
-}
-
-func (s *SequencerServer) LoadMembers(membersCh chan string, grpcServerToGetPeers *grpc.Server) error {
-	errs, _ := errgroup.WithContext(context.Background())
-
-	for i := 0; i < int(s.chatGroupSize); i++ {
-		currentMember := <-membersCh
-		s.connections[currentMember] = make(chan *proto.SequencerMessage)
-		errs.Go(func() error {
-			return s.sendBackMessages(currentMember)
-		})
-	}
-	grpcServerToGetPeers.GracefulStop()
-	return errs.Wait()
-}
 
 func (s *SequencerServer) sendBackMessages(addr string) error {
 	conn, err := grpc.Dial(
@@ -79,28 +55,13 @@ func (s *SequencerServer) OrderMessages() {
 	}
 }
 
-func NewSequencerServer(port uint16, size uint16) *SequencerServer {
-
-	seq := &SequencerServer{
-		sequenceNumber: 0,
-		seqCh:          make(chan *proto.RawMessage),
-		connections:    make(map[string]chan *proto.SequencerMessage),
-		port:           port,
-		chatGroupSize:  size,
-	}
-
-	return seq
-}
-
-func ServePeers(seqServer *SequencerServer) error {
-	lis, err := net.Listen("tcp", fmt.Sprintf(":%v", seqServer.port))
+func (s *SequencerServer) ServePeers() error {
+	lis, err := net.Listen("tcp", fmt.Sprintf(":%v", s.port))
 	if err != nil {
 		return err
 	}
 	grpcServer := grpc.NewServer()
-
-	proto.RegisterComunigoServer(grpcServer, seqServer)
+	proto.RegisterComunigoServer(grpcServer, s)
 	grpcServer.Serve(lis)
-
 	return nil
 }
