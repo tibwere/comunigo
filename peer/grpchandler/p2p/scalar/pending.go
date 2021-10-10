@@ -39,7 +39,6 @@ func (pm *PendingMessages) Insert(newMessage *proto.ScalarClockMessage) {
 	pm.lock.Lock()
 	log.Printf("Insert [%v] into pendant queue\n", newMessage)
 	pm.queue = append(pm.queue, newMessage)
-	pm.presenceCounter[newMessage.From]++
 	sort.Slice(pm.queue, func(i, j int) bool {
 
 		iClock := pm.queue[i].ScalarClock
@@ -50,10 +49,9 @@ func (pm *PendingMessages) Insert(newMessage *proto.ScalarClockMessage) {
 		return iClock < jClock || (iClock == jClock && iFrom < jFrom)
 	})
 	pm.lock.Unlock()
-}
 
-func isAckedMessage(mess *proto.ScalarClockMessage, ack *proto.ScalarClockAck) bool {
-	return mess.From == ack.From && mess.ScalarClock == ack.ScalarClock
+	pm.presenceCounter[newMessage.From]++
+
 }
 
 func (pm *PendingMessages) thereAreMessagesFromAllInQueue(actualFrom string) bool {
@@ -109,11 +107,5 @@ func (pm *PendingMessages) CheckIfIsReadyToDelivered(currUser string) *proto.Sca
 }
 
 func (pm *PendingMessages) IncrementAckCounter(ack *proto.ScalarClockAck) {
-	pm.lock.Lock()
-	for i := range pm.queue {
-		if isAckedMessage(pm.queue[i], ack) {
-			pm.receivedAcks[ack.String()]++
-		}
-	}
-	pm.lock.Unlock()
+	pm.receivedAcks[ack.String()]++
 }

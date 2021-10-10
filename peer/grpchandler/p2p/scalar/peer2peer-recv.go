@@ -41,7 +41,7 @@ func (h *P2PScalarGRPCHandler) SendAckP2PScalar(ctx context.Context, in *proto.S
 }
 
 func (h *P2PScalarGRPCHandler) SendUpdateP2PScalar(ctx context.Context, in *proto.ScalarClockMessage) (*empty.Empty, error) {
-	log.Printf("Received '%v' from %v (ID: %v)", in.GetBody(), in.GetFrom(), in.GetScalarClock())
+	log.Printf("Received '%v' from %v (timestamp: %v, current clock: %v)", in.GetBody(), in.GetFrom(), in.GetScalarClock(), h.scalarClock)
 
 	h.lockScalar.Lock()
 	// L = max(t, L)
@@ -57,6 +57,8 @@ func (h *P2PScalarGRPCHandler) SendUpdateP2PScalar(ctx context.Context, in *prot
 		From:        in.GetFrom(),
 	}
 	h.lockScalar.Unlock()
+
+	log.Printf("New clock value after update: %v\n", h.scalarClock)
 
 	for _, ch := range h.scalarAcksChs {
 		ch <- ack
