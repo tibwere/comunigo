@@ -45,9 +45,16 @@ func (h *P2PScalarGRPCHandler) SendUpdateP2PScalar(ctx context.Context, in *prot
 	h.pendingMsg.Insert(in)
 
 	h.lockScalar.Lock()
+	// L = max(t, L)
+	if h.scalarClock < in.ScalarClock {
+		h.scalarClock = in.ScalarClock
+	}
+	// L += 1
 	h.scalarClock++
+
+	// Invio del riscontro per il pacchetto ricevuto
 	ack := &proto.ScalarClockAck{
-		ScalarClock: h.scalarClock,
+		ScalarClock: in.GetScalarClock(),
 		From:        in.GetFrom(),
 	}
 	h.lockScalar.Unlock()
