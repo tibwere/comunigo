@@ -8,6 +8,7 @@ import (
 
 	"github.com/golang/protobuf/ptypes/empty"
 	"gitlab.com/tibwere/comunigo/proto"
+	"golang.org/x/sync/errgroup"
 	"google.golang.org/grpc"
 )
 
@@ -20,14 +21,18 @@ type SequencerServer struct {
 	chatGroupSize  uint16
 }
 
-func (s *SequencerServer) LoadMembers(membersCh chan string, grpcServerToGetPeers *grpc.Server) {
+func (s *SequencerServer) LoadMembers(membersCh chan string, grpcServerToGetPeers *grpc.Server) error {
+	errs, _ := errgroup.WithContext(context.Background())
+
 	for i := 0; i < int(s.chatGroupSize); i++ {
 		currentMember := <-membersCh
 		s.connections[currentMember] = make(chan *proto.SequencerMessage)
-		go s.sendBackMessages(currentMember)
+		errs.Go(func() error {
+			return s.sendBackMessages(currentMember)
+		})
 	}
-
 	grpcServerToGetPeers.GracefulStop()
+	return errs.Wait()
 }
 
 func (s *SequencerServer) sendBackMessages(addr string) error {

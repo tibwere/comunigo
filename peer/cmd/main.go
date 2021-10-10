@@ -83,11 +83,26 @@ func sequencerHandler(addr string, port uint16, status *peer.Status) {
 func scalarHandler(port uint16, status *peer.Status) {
 	p2pScalarH := scalar.NewP2PScalarGRPCHandler(port, status)
 
-	go p2pScalarH.ConnectToPeers()
-	go p2pScalarH.MultiplexMessages()
-	go p2pScalarH.ReceiveMessages()
+	errs, _ := errgroup.WithContext(context.Background())
+
+	errs.Go(func() error {
+		return p2pScalarH.ReceiveMessages()
+	})
+
+	errs.Go(func() error {
+		return p2pScalarH.ConnectToPeers()
+	})
+
+	errs.Go(func() error {
+		p2pScalarH.MultiplexMessages()
+		return nil
+	})
+
+	if err := errs.Wait(); err != nil {
+		log.Fatalf("Something went wrong in grpc connections management (%v)", err)
+	}
 }
 
 func vectorialHandler() {
-
+	log.Fatalf("Not implemented yet")
 }

@@ -45,17 +45,22 @@ func (h *P2PScalarGRPCHandler) MultiplexMessages() {
 		}
 
 		h.simulateRecv(newMessage)
-		h.pendingMsg.Insert(newMessage)
 	}
 }
 
-func (h *P2PScalarGRPCHandler) ConnectToPeers() {
+func (h *P2PScalarGRPCHandler) ConnectToPeers() error {
+	errCh := make(chan error)
+
 	for i := range h.peerStatus.Members {
-		go h.sendMessagesToOtherPeers(i)
+		go func(index int, errCh chan error) {
+			h.sendMessagesToOtherPeers(index, errCh)
+		}(i, errCh)
 	}
+
+	return <-errCh
 }
 
-func (h *P2PScalarGRPCHandler) sendMessagesToOtherPeers(index int) error {
+func (h *P2PScalarGRPCHandler) sendMessagesToOtherPeers(index int, errCh chan error) {
 
 	conn, err := grpc.Dial(
 		fmt.Sprintf("%v:%v", h.peerStatus.Members[index].GetAddress(), h.comunicationPort),
@@ -63,7 +68,8 @@ func (h *P2PScalarGRPCHandler) sendMessagesToOtherPeers(index int) error {
 		grpc.WithBlock(),
 	)
 	if err != nil {
-		return err
+		errCh <- err
+		return
 	}
 	defer conn.Close()
 
@@ -81,14 +87,16 @@ func (h *P2PScalarGRPCHandler) sendMessagesToOtherPeers(index int) error {
 			log.Printf("Sending [%v] to %v@%v\n", newMessage, h.peerStatus.Members[index].Username, h.peerStatus.Members[index].Address)
 			_, err := c.SendUpdateP2PScalar(context.Background(), newMessage)
 			if err != nil {
-				return err
+				errCh <- err
+				return
 			}
 
 		case newAck = <-h.scalarAcksChs[index]:
 			peer.WaitBeforeSend()
 			_, err := c.SendAckP2PScalar(context.Background(), newAck)
 			if err != nil {
-				return err
+				errCh <- err
+				return
 			}
 		}
 	}

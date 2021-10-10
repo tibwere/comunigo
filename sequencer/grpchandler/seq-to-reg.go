@@ -20,7 +20,6 @@ func (s *StartupSequencerServer) StartSequencer(stream proto.Registration_StartS
 	for {
 		member, err := stream.Recv()
 		if err == io.EOF {
-
 			return stream.SendAndClose(&empty.Empty{})
 		}
 		if err != nil {
