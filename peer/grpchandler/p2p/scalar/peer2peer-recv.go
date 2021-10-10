@@ -42,7 +42,6 @@ func (h *P2PScalarGRPCHandler) SendAckP2PScalar(ctx context.Context, in *proto.S
 
 func (h *P2PScalarGRPCHandler) SendUpdateP2PScalar(ctx context.Context, in *proto.ScalarClockMessage) (*empty.Empty, error) {
 	log.Printf("Received '%v' from %v (ID: %v)", in.GetBody(), in.GetFrom(), in.GetScalarClock())
-	h.pendingMsg.Insert(in)
 
 	h.lockScalar.Lock()
 	// L = max(t, L)
@@ -63,6 +62,7 @@ func (h *P2PScalarGRPCHandler) SendUpdateP2PScalar(ctx context.Context, in *prot
 		ch <- ack
 	}
 
+	h.pendingMsg.Insert(in)
 	h.tryToDeliverToDatastore()
 
 	return &empty.Empty{}, nil

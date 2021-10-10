@@ -10,6 +10,20 @@ import (
 	"google.golang.org/grpc"
 )
 
+func (h *P2PScalarGRPCHandler) simulateRecv(new *proto.ScalarClockMessage) {
+	h.lockScalar.Lock()
+	h.scalarClock++
+	h.lockScalar.Unlock()
+
+	// n.b. nella simulazione di ricezione non si invia l'ack perché nella funzione
+	// Pending#CheckIfIsReadyToDelivered(string) si effettua il conteggio degli ack
+	// ricevuti in funzione del mittente, ovvero:
+	// se il mittente corrisponde all'utent corrente allora si attende per len(otherMembers)
+	// altrimenti per len(otherMembers) - 1 (il mittente non invia il proprio ack)
+
+	h.pendingMsg.Insert(new)
+}
+
 func (h *P2PScalarGRPCHandler) MultiplexMessages() {
 
 	for {
@@ -26,11 +40,12 @@ func (h *P2PScalarGRPCHandler) MultiplexMessages() {
 		h.lockScalar.Unlock()
 		log.Printf("Created new message with scalar clock %v\n", newMessage.GetScalarClock())
 
-		h.pendingMsg.Insert(newMessage)
-
 		for _, ch := range h.scalarMessagesChs {
 			ch <- newMessage
 		}
+
+		h.simulateRecv(newMessage)
+		h.pendingMsg.Insert(newMessage)
 	}
 }
 
