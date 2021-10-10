@@ -69,7 +69,6 @@ func (pm *PendingMessages) thereAreMessagesFromAllInQueue(actualFrom string) boo
 
 func (pm *PendingMessages) CheckIfIsReadyToDelivered(currUser string) *proto.ScalarClockMessage {
 	var deliverMsg *proto.ScalarClockMessage
-	var expectedAcks int
 	canDeliver := false
 
 	if len(pm.queue) == 0 {
@@ -83,15 +82,9 @@ func (pm *PendingMessages) CheckIfIsReadyToDelivered(currUser string) *proto.Sca
 		From:        firstMsg.From,
 	}
 
-	if firstMsg.From == currUser {
-		expectedAcks = len(pm.otherFroms)
-	} else {
-		expectedAcks = len(pm.otherFroms) - 1
-	}
+	log.Printf("Received %v/%v acks for [%v]\n", pm.receivedAcks[firstAck.String()], len(pm.otherFroms), firstMsg)
 
-	log.Printf("Received %v/%v acks for [%v]\n", pm.receivedAcks[firstAck.String()], expectedAcks, firstMsg)
-
-	if pm.receivedAcks[firstAck.String()] == expectedAcks && pm.thereAreMessagesFromAllInQueue(pm.queue[0].From) {
+	if pm.receivedAcks[firstAck.String()] == len(pm.otherFroms) && pm.thereAreMessagesFromAllInQueue(pm.queue[0].From) {
 		deliverMsg = pm.queue[0]
 		canDeliver = true
 		pm.queue = pm.queue[1:]

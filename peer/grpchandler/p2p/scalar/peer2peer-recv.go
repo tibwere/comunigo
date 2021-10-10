@@ -58,6 +58,11 @@ func (h *P2PScalarGRPCHandler) SendUpdateP2PScalar(ctx context.Context, in *prot
 	}
 	h.lockScalar.Unlock()
 
+	// Incremento del contatore del mittente dell'ack perché non lo
+	// invia a se stesso
+	log.Printf("Autoincrement ACK counter after reception of message from %v\n", in.GetFrom())
+	h.pendingMsg.IncrementAckCounter(ack)
+
 	log.Printf("New clock value after update: %v\n", h.scalarClock)
 
 	for _, ch := range h.scalarAcksChs {
