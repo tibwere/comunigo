@@ -8,8 +8,28 @@ import (
 
 	"github.com/golang/protobuf/ptypes/empty"
 	"gitlab.com/tibwere/comunigo/proto"
+	"golang.org/x/sync/errgroup"
 	"google.golang.org/grpc"
 )
+
+func (s *SequencerServer) StartupConnectionWithPeers(fromRegToSeqGRPCserver *grpc.Server) error {
+	errs, _ := errgroup.WithContext(context.Background())
+
+	for i := 0; i < int(s.chatGroupSize); i++ {
+		currentMember := <-s.memberCh
+		s.connections[currentMember.Address] = make(chan *proto.SequencerMessage)
+
+		errs.Go(func() error {
+			return s.sendBackMessages(currentMember.Address)
+		})
+	}
+
+	// tutte le connessioni sono state aperte quindi è possibile
+	// stoppare il server GRPC
+	fromRegToSeqGRPCserver.GracefulStop()
+
+	return errs.Wait()
+}
 
 func (s *SequencerServer) sendBackMessages(addr string) error {
 	conn, err := grpc.Dial(

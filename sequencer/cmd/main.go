@@ -6,8 +6,10 @@ import (
 	"os"
 
 	"gitlab.com/tibwere/comunigo/config"
+	"gitlab.com/tibwere/comunigo/proto"
 	"gitlab.com/tibwere/comunigo/sequencer/grpchandler"
 	"golang.org/x/sync/errgroup"
+	"google.golang.org/grpc"
 )
 
 func main() {
@@ -34,13 +36,22 @@ func main() {
 		log.Printf("Start server on port %v\n", cfg.ChatPort)
 	}
 
-	// Inizializzazione del sequence server
-	seqH := grpchandler.NewSequencerServer(cfg.ChatPort, cfg.ChatGroupSize)
+	// Inizializzazione dei server
+	memberCh := make(chan *proto.PeerInfo, cfg.ChatGroupSize)
+	seqH := grpchandler.NewSequencerServer(cfg.ChatPort, cfg.ChatGroupSize, memberCh)
+	fromRegH := grpchandler.NewFromRegisterServer(memberCh)
+	fromRegToSeqGRPCserver := grpc.NewServer()
 
 	// Retrieve dei peer dal register
 	errs, _ := errgroup.WithContext(context.Background())
 	errs.Go(func() error {
-		return seqH.GetPeersFromRegister(cfg.RegPort)
+		return fromRegH.GetPeersFromRegister(cfg.RegPort, fromRegToSeqGRPCserver)
+	})
+
+	// Metodo buffer che non fa altro che prendere da un canale
+	// degli indirizzi ed utilizzarli per aprire nuove connessioni
+	errs.Go(func() error {
+		return seqH.StartupConnectionWithPeers(fromRegToSeqGRPCserver)
 	})
 
 	// Routine per l'ordinamento sequenziale dei messaggi
@@ -54,6 +65,7 @@ func main() {
 	errs.Go(func() error {
 		return seqH.ServePeers()
 	})
+
 	if err = errs.Wait(); err != nil {
 		log.Fatalf("Something went wrong while sending/receiving messages from peer (%v)\n", err)
 	}

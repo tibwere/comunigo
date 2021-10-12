@@ -1,18 +1,16 @@
 package grpchandler
 
 import (
-	"context"
 	"fmt"
 	"io"
 	"net"
 
 	"github.com/golang/protobuf/ptypes/empty"
 	"gitlab.com/tibwere/comunigo/proto"
-	"golang.org/x/sync/errgroup"
+	"google.golang.org/grpc"
 )
 
-func (s *SequencerServer) ExchangePeerInfoFromRegToSeq(stream proto.Registration_ExchangePeerInfoFromRegToSeqServer) error {
-	errs, _ := errgroup.WithContext(context.Background())
+func (s *FromRegisterServer) ExchangePeerInfoFromRegToSeq(stream proto.Registration_ExchangePeerInfoFromRegToSeqServer) error {
 	for {
 		member, err := stream.Recv()
 		if err == io.EOF {
@@ -25,24 +23,21 @@ func (s *SequencerServer) ExchangePeerInfoFromRegToSeq(stream proto.Registration
 			return err
 		}
 
-		s.connections[member.Address] = make(chan *proto.SequencerMessage)
-		errs.Go(func() error {
-			return s.sendBackMessages(member.Address)
-		})
+		s.memberCh <- member
 	}
 
-	s.fromRegToSeqGRPCserver.GracefulStop()
-	return errs.Wait()
+	return nil
 }
 
-func (s *SequencerServer) GetPeersFromRegister(port uint16) error {
+func (s *FromRegisterServer) GetPeersFromRegister(port uint16, fromRegToSeqGRPCserver *grpc.Server) error {
 
 	lis, err := net.Listen("tcp", fmt.Sprintf(":%v", port))
 	if err != nil {
 		return err
 	}
 
-	proto.RegisterRegistrationServer(s.fromRegToSeqGRPCserver, s)
-	s.fromRegToSeqGRPCserver.Serve(lis)
+	proto.RegisterRegistrationServer(fromRegToSeqGRPCserver, s)
+	fromRegToSeqGRPCserver.Serve(lis)
+
 	return nil
 }
