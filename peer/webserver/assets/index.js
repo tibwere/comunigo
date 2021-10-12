@@ -4,6 +4,7 @@ $( document ).ready(function() {
     document.title = metadata.Username + " - comuniGO"
 
     $("#me").text(metadata.Username)
+    $("#tos").text(metadata.Tos)
     metadata.Members.forEach(m => $("#memberList").append('<li class="list-group-item list-group-item-warning"><strong class="text-primary">' + m + '</strong></li>'))
 });
 

@@ -38,7 +38,7 @@ func main() {
 	}
 
 	wg.Add(2)
-	ws := webserver.New(cfg.WebServerPort, cfg.ChatGroupSize, status)
+	ws := webserver.New(cfg.WebServerPort, cfg.ChatGroupSize, cfg.TypeOfService, status)
 	go ws.Startup(&wg)
 	go func() {
 		defer wg.Done()

@@ -23,13 +23,15 @@ const (
 type WebServer struct {
 	port          uint16
 	chatGroupSize uint16
+	tos           string
 	peerStatus    *peer.Status
 }
 
-func New(exposedPort uint16, size uint16, status *peer.Status) *WebServer {
+func New(exposedPort uint16, size uint16, tos string, status *peer.Status) *WebServer {
 	return &WebServer{
 		port:          exposedPort,
 		chatGroupSize: size,
+		tos:           tos,
 		peerStatus:    status,
 	}
 }
@@ -113,6 +115,7 @@ func (ws *WebServer) signNewUserHandler(c echo.Context) error {
 		select {
 		case <-ws.peerStatus.DoneCh:
 			return sendJSONString(c, map[string]interface{}{
+				"Tos":      ws.tos,
 				"Username": ws.peerStatus.CurrentUsername,
 				"Members":  ws.getListOfOtherUsername(),
 			})

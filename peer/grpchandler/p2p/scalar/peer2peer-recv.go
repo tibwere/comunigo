@@ -25,9 +25,15 @@ func (h *P2PScalarGRPCHandler) ReceiveMessages() error {
 }
 
 func (h *P2PScalarGRPCHandler) tryToDeliverToDatastore() {
-	if mess := h.pendingMsg.CheckIfIsReadyToDelivered(h.peerStatus.CurrentUsername); mess != nil {
-		log.Printf("Delivered new message (Clock: %v - From: %v)\n", mess.GetScalarClock(), mess.GetFrom())
-		peer.InsertScalarClockMessage(h.peerStatus.Datastore, h.peerStatus.CurrentUsername, mess)
+	for {
+		mess := h.pendingMsg.CheckIfIsReadyToDelivered(h.peerStatus.CurrentUsername)
+
+		if mess != nil {
+			log.Printf("Delivered new message (Clock: %v - From: %v)\n", mess.GetScalarClock(), mess.GetFrom())
+			peer.InsertScalarClockMessage(h.peerStatus.Datastore, h.peerStatus.CurrentUsername, mess)
+		} else {
+			break
+		}
 	}
 }
 
@@ -48,8 +54,8 @@ func (h *P2PScalarGRPCHandler) SendUpdateP2PScalar(ctx context.Context, in *prot
 	if h.scalarClock < in.ScalarClock {
 		h.scalarClock = in.ScalarClock
 	}
-	// L += 1
-	h.scalarClock++
+	// L += 1 (Non necessario al fine di ordinare i messaggi [?])
+	// h.scalarClock++
 
 	// Invio del riscontro per il pacchetto ricevuto
 	ack := &proto.ScalarClockAck{
