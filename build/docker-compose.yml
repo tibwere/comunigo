@@ -3,9 +3,7 @@ version: "3.9"
 services: 
   # Microservizio di registrazione
   registration_ms:
-    build:
-      context: ../
-      dockerfile: ./build/dockerfiles/registration/Dockerfile
+    image: "comunigo/registration:latest"
     environment: 
       - REG_PORT
       - SIZE
@@ -17,9 +15,7 @@ services:
 
   # Microservizio sequencer
   sequencer_ms:
-    build:
-      context: ../
-      dockerfile: ./build/dockerfiles/sequencer/Dockerfile
+    image: "comunigo/sequencer:latest"
     environment:
       - CHAT_PORT
       - REG_PORT
@@ -31,9 +27,7 @@ services:
 
   # Microservizio peer
   peer_ms:
-    build:
-      context: ../
-      dockerfile: ./build/dockerfiles/peer/Dockerfile
+    image: "comunigo/peer:latest"
     ports:
       - $WS_PORT
     environment: 

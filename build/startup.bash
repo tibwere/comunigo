@@ -1,7 +1,7 @@
 #!/bin/bash
 
 usage() {
-    echo "Usage: ${0} -n <number-of-peers> -t sequencer | scalar [-v verbose -b build]"
+    echo "Usage: ${0} -n <number-of-peers> -t sequencer | scalar [-v verbose]"
 }
 
 SIZE=3
@@ -11,11 +11,10 @@ DC_FILE="./docker-compose.yml"
 CONFIG_FILE="./comunigo.cfg"
 ENV_FILE="./.env"
 TOS=""
-BUILD=false
 PROJ_NAME=comunigo
 
 # Parse command line options
-while getopts ":hn:vt:b" opt; do
+while getopts ":hn:vt:" opt; do
     case ${opt} in
         h ) 
             usage
@@ -30,9 +29,6 @@ while getopts ":hn:vt:b" opt; do
             ;;
         t )
             TOS=${OPTARG}
-            ;;
-        b )
-            BUILD=true
             ;;
         ? )
             usage
@@ -74,13 +70,7 @@ echo "TOS=${TOS}" >> ${ENV_FILE}
 echo "SIZE=${SIZE}" >> ${ENV_FILE}
 echo "[+] Created environment file for docker-compose"
 
-# Build containers
-if [ "${BUILD}" == "true" ]; then
-    echo -e "[+] Building  ${SIZE} peers, sequencer and register services ..."
-    docker-compose -f ${DC_FILE} --env-file ${ENV_FILE} --project-name ${PROJ_NAME} build
-fi
-
 # Run containers
 echo -e "[+] Startup ${SIZE} peers, sequencer and register services ..."
-docker-compose -f ${DC_FILE} --env-file ${ENV_FILE} --project-name ${PROJ_NAME} up -d --scale peer_ms=${SIZE}
+docker-compose -f ${DC_FILE} --env-file ${ENV_FILE} --project-name ${PROJ_NAME} up -d --scale peer_ms=${SIZE} --build
 

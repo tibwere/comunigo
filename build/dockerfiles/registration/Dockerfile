@@ -1,4 +1,5 @@
 FROM golang:1.16-alpine AS build
+LABEL stage=builder
 ENV GO111MODULE=on GOOS=linux GOARCH=amd64
 WORKDIR /registration
 COPY . .
