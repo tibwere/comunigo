@@ -1,8 +1,12 @@
-#!/bin/sh
+#!/bin/bash
 
 cleanup() {
     echo "[+] Removing builder images..."
     docker image prune --filter label=stage=builder
+}
+
+usage() {
+    echo "[?] Usage: $0 [ peer | sequencer | registration ]+"
 }
 
 DF_FOLDER="./dockerfiles/"
@@ -11,29 +15,30 @@ SEQ_DF="${DF_FOLDER}sequencer/Dockerfile"
 REG_DF="${DF_FOLDER}registration/Dockerfile"
 CONTEXT="../"
 
-[ "$#" -eq 1 ] && [ "$1" = "-h" ] && echo "[?] Usage: $0 [ peer | sequencer | registration ]+" && exit 0
+[ "$#" -eq 1 ] && [ "$1" = "-h" ] && usage && exit 0
 
-for image in $@; do
-    case ${image} in
-        peer )
+while getopts ":psr" opt; do
+    case ${opt} in
+        p ) 
             echo "[+] Building comunigo/peer:latest image"
             docker build -f ${PEER_DF} -t comunigo/peer:latest ${CONTEXT}
             ;;
-        sequencer )
+        s )
             echo "[+] Building comunigo/sequencer:latest image"
             docker build -f ${SEQ_DF} -t comunigo/sequencer:latest ${CONTEXT}
             ;;
-        registration)
+        r )
             echo "[+] Building comunigo/registration:latest image"
             docker build -f ${REG_DF} -t comunigo/registration:latest ${CONTEXT}
             ;;
-        * )
+        ? )
             echo "[!] Invalid image requested"
+            usage
             cleanup
-            exit 1
-            ;;
+            exit 1 
     esac
 done
+shift $((OPTIND -1))
 
 cleanup
 exit 0
