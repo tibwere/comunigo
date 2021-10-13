@@ -4,8 +4,8 @@ services:
   # Microservizio di registrazione
   registration_ms:
     build:
-      context: .
-      dockerfile: ./dockerfiles/registration/Dockerfile
+      context: ../
+      dockerfile: ./build/dockerfiles/registration/Dockerfile
     environment: 
       - REG_PORT
       - SIZE
@@ -13,13 +13,13 @@ services:
       - SEQ_HOSTNAME
       - TOS
     volumes:
-      - ./logs:/logs
+      - ../logs:/logs
 
   # Microservizio sequencer
   sequencer_ms:
     build:
-      context: .
-      dockerfile: ./dockerfiles/sequencer/Dockerfile
+      context: ../
+      dockerfile: ./build/dockerfiles/sequencer/Dockerfile
     environment:
       - CHAT_PORT
       - REG_PORT
@@ -27,13 +27,13 @@ services:
       - SIZE
       - TOS
     volumes:
-      - ./logs:/logs
+      - ../logs:/logs
 
   # Microservizio peer
   peer_ms:
     build:
-      context: .
-      dockerfile: ./dockerfiles/peer/Dockerfile
+      context: ../
+      dockerfile: ./build/dockerfiles/peer/Dockerfile
     ports:
       - $WS_PORT
     environment: 
@@ -46,12 +46,11 @@ services:
       - REDIS_HOSTNAME
       - VERBOSE
       - TOS
-    scale: $SIZE
     depends_on: 
       - "peer_ds"
     volumes:
-      - ./peer/webserver/assets:/assets:ro
-      - ./logs:/logs
+      - ../peer/webserver/assets:/assets:ro
+      - ../logs:/logs
 
   peer_ds:
     image: "redis:alpine"
