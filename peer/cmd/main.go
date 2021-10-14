@@ -11,6 +11,7 @@ import (
 	"gitlab.com/tibwere/comunigo/config"
 	"gitlab.com/tibwere/comunigo/peer"
 	"gitlab.com/tibwere/comunigo/peer/grpchandler/p2p/scalar"
+	"gitlab.com/tibwere/comunigo/peer/grpchandler/p2p/vectorial"
 	"gitlab.com/tibwere/comunigo/peer/grpchandler/reg"
 	"gitlab.com/tibwere/comunigo/peer/grpchandler/seq"
 	"gitlab.com/tibwere/comunigo/peer/webserver"
@@ -55,7 +56,7 @@ func main() {
 		case "scalar":
 			scalarHandler(cfg.ChatPort, status)
 		case "vectorial":
-			vectorialHandler()
+			vectorialHandler(cfg.ChatPort, status)
 		default:
 			log.Fatalf("TOS not expected")
 		}
@@ -103,6 +104,25 @@ func scalarHandler(port uint16, status *peer.Status) {
 	}
 }
 
-func vectorialHandler() {
-	log.Fatalf("Not implemented yet")
+func vectorialHandler(port uint16, status *peer.Status) {
+	p2pVectorialH := vectorial.NewP2PVectorialGRPCHandler(port, status)
+
+	errs, _ := errgroup.WithContext(context.Background())
+
+	errs.Go(func() error {
+		return p2pVectorialH.ReceiveMessages()
+	})
+
+	errs.Go(func() error {
+		return p2pVectorialH.ConnectToPeers()
+	})
+
+	errs.Go(func() error {
+		p2pVectorialH.MultiplexMessages()
+		return nil
+	})
+
+	if err := errs.Wait(); err != nil {
+		log.Fatalf("Something went wrong in grpc connections management (%v)", err)
+	}
 }

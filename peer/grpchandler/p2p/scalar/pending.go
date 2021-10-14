@@ -9,7 +9,7 @@ import (
 )
 
 type PendingMessages struct {
-	lock            *sync.Mutex
+	mu              *sync.Mutex
 	queue           []*proto.ScalarClockMessage
 	receivedAcks    map[string]int
 	presenceCounter map[string]int
@@ -18,7 +18,7 @@ type PendingMessages struct {
 
 func InitPendingMessagesList(allMembers []*proto.PeerInfo, currUser string) *PendingMessages {
 	pm := &PendingMessages{
-		lock:            &sync.Mutex{},
+		mu:              &sync.Mutex{},
 		queue:           []*proto.ScalarClockMessage{},
 		receivedAcks:    map[string]int{},
 		presenceCounter: make(map[string]int),
@@ -36,19 +36,19 @@ func InitPendingMessagesList(allMembers []*proto.PeerInfo, currUser string) *Pen
 }
 
 func (pm *PendingMessages) Insert(newMessage *proto.ScalarClockMessage) {
-	pm.lock.Lock()
+	pm.mu.Lock()
 	log.Printf("Insert [%v] into pendant queue\n", newMessage)
 	pm.queue = append(pm.queue, newMessage)
 	sort.Slice(pm.queue, func(i, j int) bool {
 
-		iClock := pm.queue[i].ScalarClock
-		jClock := pm.queue[j].ScalarClock
+		iClock := pm.queue[i].Timestamp
+		jClock := pm.queue[j].Timestamp
 		iFrom := pm.queue[i].From
 		jFrom := pm.queue[i].From
 
 		return iClock < jClock || (iClock == jClock && iFrom < jFrom)
 	})
-	pm.lock.Unlock()
+	pm.mu.Unlock()
 
 	pm.presenceCounter[newMessage.From]++
 
@@ -75,11 +75,11 @@ func (pm *PendingMessages) CheckIfIsReadyToDelivered(currUser string) *proto.Sca
 		return nil
 	}
 
-	pm.lock.Lock()
+	pm.mu.Lock()
 	firstMsg := pm.queue[0]
 	firstAck := &proto.ScalarClockAck{
-		ScalarClock: firstMsg.ScalarClock,
-		From:        firstMsg.From,
+		Timestamp: firstMsg.Timestamp,
+		From:      firstMsg.From,
 	}
 
 	log.Printf("Received %v/%v acks for [%v]\n", pm.receivedAcks[firstAck.String()], len(pm.otherFroms), firstMsg)
@@ -90,7 +90,7 @@ func (pm *PendingMessages) CheckIfIsReadyToDelivered(currUser string) *proto.Sca
 		pm.queue = pm.queue[1:]
 		pm.presenceCounter[firstAck.From]--
 	}
-	pm.lock.Unlock()
+	pm.mu.Unlock()
 
 	if canDeliver {
 		return deliverMsg

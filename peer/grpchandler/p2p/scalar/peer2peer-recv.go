@@ -29,7 +29,7 @@ func (h *P2PScalarGRPCHandler) tryToDeliverToDatastore() {
 		mess := h.pendingMsg.CheckIfIsReadyToDelivered(h.peerStatus.CurrentUsername)
 
 		if mess != nil {
-			log.Printf("Delivered new message (Clock: %v - From: %v)\n", mess.GetScalarClock(), mess.GetFrom())
+			log.Printf("Delivered new message (Clock: %v - From: %v)\n", mess.GetTimestamp(), mess.GetFrom())
 			peer.InsertScalarClockMessage(h.peerStatus.Datastore, h.peerStatus.CurrentUsername, mess)
 		} else {
 			break
@@ -38,7 +38,7 @@ func (h *P2PScalarGRPCHandler) tryToDeliverToDatastore() {
 }
 
 func (h *P2PScalarGRPCHandler) SendAckP2PScalar(ctx context.Context, in *proto.ScalarClockAck) (*empty.Empty, error) {
-	log.Printf("Received ACK for %v (from %v)\n", in.GetScalarClock(), in.GetFrom())
+	log.Printf("Received ACK for %v (from %v)\n", in.GetTimestamp(), in.GetFrom())
 	h.pendingMsg.IncrementAckCounter(in)
 
 	h.tryToDeliverToDatastore()
@@ -47,20 +47,20 @@ func (h *P2PScalarGRPCHandler) SendAckP2PScalar(ctx context.Context, in *proto.S
 }
 
 func (h *P2PScalarGRPCHandler) SendUpdateP2PScalar(ctx context.Context, in *proto.ScalarClockMessage) (*empty.Empty, error) {
-	log.Printf("Received '%v' from %v (timestamp: %v, current clock: %v)", in.GetBody(), in.GetFrom(), in.GetScalarClock(), h.scalarClock)
+	log.Printf("Received '%v' from %v (timestamp: %v, current clock: %v)", in.GetBody(), in.GetFrom(), in.GetTimestamp(), h.scalarClock)
 
 	h.lockScalar.Lock()
 	// L = max(t, L)
-	if h.scalarClock < in.ScalarClock {
-		h.scalarClock = in.ScalarClock
+	if h.scalarClock < in.Timestamp {
+		h.scalarClock = in.Timestamp
 	}
-	// L += 1 (Non necessario al fine di ordinare i messaggi [?])
-	// h.scalarClock++
+	// L += 1
+	h.scalarClock++
 
 	// Invio del riscontro per il pacchetto ricevuto
 	ack := &proto.ScalarClockAck{
-		ScalarClock: in.GetScalarClock(),
-		From:        in.GetFrom(),
+		Timestamp: in.GetTimestamp(),
+		From:      in.GetFrom(),
 	}
 	h.lockScalar.Unlock()
 

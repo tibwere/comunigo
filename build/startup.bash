@@ -38,8 +38,8 @@ done
 shift $((OPTIND -1))
 
 # Dump of configurations 
-if [ "${TOS}" != "sequencer" ] && [ "${TOS}" != "scalar" ] && [ "${TOS}" != "vector" ]; then
-    echo "[!] Select a valid type of service: sequencer | scalar | vector"
+if [ "${TOS}" != "sequencer" ] && [ "${TOS}" != "scalar" ] && [ "${TOS}" != "vectorial" ]; then
+    echo "[!] Select a valid type of service: sequencer | scalar | vectorial"
     exit 1
 fi
 
@@ -72,5 +72,5 @@ echo "[+] Created environment file for docker-compose"
 
 # Run containers
 echo -e "[+] Startup ${SIZE} peers, sequencer and register services ..."
-docker-compose -f ${DC_FILE} --env-file ${ENV_FILE} --project-name ${PROJ_NAME} up -d --scale peer_ms=${SIZE} --build
+docker-compose -f ${DC_FILE} --env-file ${ENV_FILE} --project-name ${PROJ_NAME} up --scale peer_ms=${SIZE} --build
 

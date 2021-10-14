@@ -30,7 +30,7 @@ func (h *ToRegisterGRPCHandler) getOtherMembers(currUser string, stream proto.Re
 		}
 
 		if currUser != member.GetUsername() {
-			h.peerStatus.Members = append(h.peerStatus.Members, member)
+			h.peerStatus.OtherMembers = append(h.peerStatus.OtherMembers, member)
 		}
 	}
 }

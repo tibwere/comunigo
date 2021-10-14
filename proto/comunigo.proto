@@ -11,6 +11,7 @@ service Comunigo {
     rpc SendFromSequencerToPeer(SequencerMessage) returns (google.protobuf.Empty);
     rpc SendUpdateP2PScalar(ScalarClockMessage) returns (google.protobuf.Empty);
     rpc SendAckP2PScalar(ScalarClockAck) returns (google.protobuf.Empty);
+    rpc SendUpdateP2PVectorial(VectorialClockMessage) returns (google.protobuf.Empty);
 }
 
 message RawMessage {
@@ -19,18 +20,24 @@ message RawMessage {
 }
 
 message SequencerMessage {
-    uint64 SequenceNumber = 1;
+    uint64 Timestamp = 1;
     string From = 2;
     string Body = 3;
 }
 
 message ScalarClockMessage {
-    uint64 ScalarClock = 1;
+    uint64 Timestamp = 1;
     string From = 2;
     string Body = 3;
 }
 
 message ScalarClockAck {
-    uint64 ScalarClock = 1;
+    uint64 Timestamp = 1;
     string From = 2;    
+}
+
+message VectorialClockMessage {
+    repeated uint64 Timestamp = 1;
+    string From = 2;
+    string Body = 3;
 }

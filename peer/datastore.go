@@ -29,7 +29,9 @@ func InsertSequencerMessage(ds *redis.Client, key string, message *proto.Sequenc
 	if err != nil {
 		return err
 	} else {
-		return ds.RPush(context.Background(), key, string(byteMessage)).Err()
+		val := string(byteMessage)
+		log.Printf("RPush into redis at key %v val: %v\n", key, val)
+		return ds.RPush(context.Background(), key, val).Err()
 	}
 }
 
@@ -44,8 +46,26 @@ func InsertScalarClockMessage(ds *redis.Client, key string, message *proto.Scala
 	if err != nil {
 		return err
 	} else {
-		log.Printf("RPush into redis at key %v\n", key)
-		return ds.RPush(context.Background(), key, string(byteMessage)).Err()
+		val := string(byteMessage)
+		log.Printf("RPush into redis at key %v val: %v\n", key, val)
+		return ds.RPush(context.Background(), key, val).Err()
+	}
+}
+
+func InsertVectorialClockMessage(ds *redis.Client, key string, message *proto.VectorialClockMessage) error {
+
+	enc := &protojson.MarshalOptions{
+		Multiline:       false,
+		EmitUnpopulated: true,
+	}
+
+	byteMessage, err := enc.Marshal(message)
+	if err != nil {
+		return err
+	} else {
+		val := string(byteMessage)
+		log.Printf("RPush into redis at key %v val: %v\n", key, val)
+		return ds.RPush(context.Background(), key, val).Err()
 	}
 }
 

@@ -27,12 +27,12 @@ func (h *P2PScalarGRPCHandler) MultiplexMessages() {
 		h.lockScalar.Lock()
 		h.scalarClock++
 		newMessage := &proto.ScalarClockMessage{
-			ScalarClock: h.scalarClock,
-			From:        h.peerStatus.CurrentUsername,
-			Body:        newMessageBody,
+			Timestamp: h.scalarClock,
+			From:      h.peerStatus.CurrentUsername,
+			Body:      newMessageBody,
 		}
 		h.lockScalar.Unlock()
-		log.Printf("Created new message with scalar clock %v\n", newMessage.GetScalarClock())
+		log.Printf("Created new message with scalar clock %v\n", newMessage.GetTimestamp())
 
 		for _, ch := range h.scalarMessagesChs {
 			ch <- newMessage
@@ -45,7 +45,7 @@ func (h *P2PScalarGRPCHandler) MultiplexMessages() {
 func (h *P2PScalarGRPCHandler) ConnectToPeers() error {
 	errCh := make(chan error)
 
-	for i := range h.peerStatus.Members {
+	for i := range h.peerStatus.OtherMembers {
 		go func(index int, errCh chan error) {
 			h.sendMessagesToOtherPeers(index, errCh)
 		}(i, errCh)
@@ -57,7 +57,7 @@ func (h *P2PScalarGRPCHandler) ConnectToPeers() error {
 func (h *P2PScalarGRPCHandler) sendMessagesToOtherPeers(index int, errCh chan error) {
 
 	conn, err := grpc.Dial(
-		fmt.Sprintf("%v:%v", h.peerStatus.Members[index].GetAddress(), h.comunicationPort),
+		fmt.Sprintf("%v:%v", h.peerStatus.OtherMembers[index].GetAddress(), h.comunicationPort),
 		grpc.WithInsecure(),
 		grpc.WithBlock(),
 	)
@@ -67,7 +67,7 @@ func (h *P2PScalarGRPCHandler) sendMessagesToOtherPeers(index int, errCh chan er
 	}
 	defer conn.Close()
 
-	log.Printf("Succesfully linked to %v@%v\n", h.peerStatus.Members[index].GetUsername(), h.peerStatus.Members[index].GetAddress())
+	log.Printf("Succesfully linked to %v@%v\n", h.peerStatus.OtherMembers[index].GetUsername(), h.peerStatus.OtherMembers[index].GetAddress())
 
 	c := proto.NewComunigoClient(conn)
 
@@ -78,7 +78,7 @@ func (h *P2PScalarGRPCHandler) sendMessagesToOtherPeers(index int, errCh chan er
 		select {
 		case newMessage = <-h.scalarMessagesChs[index]:
 			peer.WaitBeforeSend()
-			log.Printf("Sending [%v] to %v@%v\n", newMessage, h.peerStatus.Members[index].Username, h.peerStatus.Members[index].Address)
+			log.Printf("Sending [%v] to %v@%v\n", newMessage, h.peerStatus.OtherMembers[index].Username, h.peerStatus.OtherMembers[index].Address)
 			_, err := c.SendUpdateP2PScalar(context.Background(), newMessage)
 			if err != nil {
 				errCh <- err

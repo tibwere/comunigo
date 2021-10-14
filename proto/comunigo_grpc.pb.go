@@ -23,6 +23,7 @@ type ComunigoClient interface {
 	SendFromSequencerToPeer(ctx context.Context, in *SequencerMessage, opts ...grpc.CallOption) (*empty.Empty, error)
 	SendUpdateP2PScalar(ctx context.Context, in *ScalarClockMessage, opts ...grpc.CallOption) (*empty.Empty, error)
 	SendAckP2PScalar(ctx context.Context, in *ScalarClockAck, opts ...grpc.CallOption) (*empty.Empty, error)
+	SendUpdateP2PVectorial(ctx context.Context, in *VectorialClockMessage, opts ...grpc.CallOption) (*empty.Empty, error)
 }
 
 type comunigoClient struct {
@@ -69,6 +70,15 @@ func (c *comunigoClient) SendAckP2PScalar(ctx context.Context, in *ScalarClockAc
 	return out, nil
 }
 
+func (c *comunigoClient) SendUpdateP2PVectorial(ctx context.Context, in *VectorialClockMessage, opts ...grpc.CallOption) (*empty.Empty, error) {
+	out := new(empty.Empty)
+	err := c.cc.Invoke(ctx, "/proto.Comunigo/SendUpdateP2PVectorial", in, out, opts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
 // ComunigoServer is the server API for Comunigo service.
 // All implementations must embed UnimplementedComunigoServer
 // for forward compatibility
@@ -77,6 +87,7 @@ type ComunigoServer interface {
 	SendFromSequencerToPeer(context.Context, *SequencerMessage) (*empty.Empty, error)
 	SendUpdateP2PScalar(context.Context, *ScalarClockMessage) (*empty.Empty, error)
 	SendAckP2PScalar(context.Context, *ScalarClockAck) (*empty.Empty, error)
+	SendUpdateP2PVectorial(context.Context, *VectorialClockMessage) (*empty.Empty, error)
 	mustEmbedUnimplementedComunigoServer()
 }
 
@@ -95,6 +106,9 @@ func (UnimplementedComunigoServer) SendUpdateP2PScalar(context.Context, *ScalarC
 }
 func (UnimplementedComunigoServer) SendAckP2PScalar(context.Context, *ScalarClockAck) (*empty.Empty, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method SendAckP2PScalar not implemented")
+}
+func (UnimplementedComunigoServer) SendUpdateP2PVectorial(context.Context, *VectorialClockMessage) (*empty.Empty, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method SendUpdateP2PVectorial not implemented")
 }
 func (UnimplementedComunigoServer) mustEmbedUnimplementedComunigoServer() {}
 
@@ -181,6 +195,24 @@ func _Comunigo_SendAckP2PScalar_Handler(srv interface{}, ctx context.Context, de
 	return interceptor(ctx, in, info, handler)
 }
 
+func _Comunigo_SendUpdateP2PVectorial_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(VectorialClockMessage)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(ComunigoServer).SendUpdateP2PVectorial(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: "/proto.Comunigo/SendUpdateP2PVectorial",
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(ComunigoServer).SendUpdateP2PVectorial(ctx, req.(*VectorialClockMessage))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
 // Comunigo_ServiceDesc is the grpc.ServiceDesc for Comunigo service.
 // It's only intended for direct use with grpc.RegisterService,
 // and not to be introspected or modified (even as a copy)
@@ -203,6 +235,10 @@ var Comunigo_ServiceDesc = grpc.ServiceDesc{
 		{
 			MethodName: "SendAckP2PScalar",
 			Handler:    _Comunigo_SendAckP2PScalar_Handler,
+		},
+		{
+			MethodName: "SendUpdateP2PVectorial",
+			Handler:    _Comunigo_SendUpdateP2PVectorial_Handler,
 		},
 	},
 	Streams:  []grpc.StreamDesc{},

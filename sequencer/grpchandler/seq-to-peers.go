@@ -63,9 +63,9 @@ func (s *SequencerServer) OrderMessages() {
 		unordered := <-s.seqCh
 
 		ordered := &proto.SequencerMessage{
-			SequenceNumber: s.sequenceNumber,
-			From:           unordered.GetFrom(),
-			Body:           unordered.GetBody(),
+			Timestamp: s.sequenceNumber,
+			From:      unordered.GetFrom(),
+			Body:      unordered.GetBody(),
 		}
 		s.sequenceNumber++
 

@@ -52,7 +52,12 @@ $("#reloadMessagesForm").submit(function (e) {
                 $("#messageList").empty()
 
                 $.each(messages, function(i, m) {
-                    console.log("New! [ID: " + m.ID + ", From: " + m.From + ", Body: " + m.Body + "]")
+                    if (Array.isArray(m.Timestamp)) {
+                        console.log("New! [ID: [" + m.Timestamp + "], From: " + m.From + ", Body: " + m.Body + "]")
+                    } else {
+                        console.log("New! [ID: " + m.Timestamp + ", From: " + m.From + ", Body: " + m.Body + "]")
+                    }
+
                     if (m.From == sessionStorage.getItem("currentUser")) {
                         $("#messageList").append('<li class="list-group-item list-group-item-warning"><strong class="text-warning">(' + m.From + ')</strong> ' + m.Body + '</li>')                    
                     } else {
