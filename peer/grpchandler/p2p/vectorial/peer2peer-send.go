@@ -10,20 +10,26 @@ import (
 	"google.golang.org/grpc"
 )
 
+func (h *P2PVectorialGRPCHandler) encapsulateMessage(body string) *proto.VectorialClockMessage {
+	h.clockMu.Lock()
+	h.incrementClockUnlocked(h.peerStatus.CurrentUsername)
+	newMessage := &proto.VectorialClockMessage{
+		Timestamp: h.vectorialClock,
+		From:      h.peerStatus.CurrentUsername,
+		Body:      body,
+	}
+	h.clockMu.Unlock()
+
+	return newMessage
+}
+
 func (h *P2PVectorialGRPCHandler) MultiplexMessages() {
 
 	for {
 		newMessageBody := <-h.peerStatus.RawMessageCh
 
 		log.Printf("Received from frontend: %v\n", newMessageBody)
-		h.mu.Lock()
-		h.incrementClock(h.peerStatus.CurrentUsername)
-		newMessage := &proto.VectorialClockMessage{
-			Timestamp: h.vectorialClock,
-			From:      h.peerStatus.CurrentUsername,
-			Body:      newMessageBody,
-		}
-		h.mu.Unlock()
+		newMessage := h.encapsulateMessage(newMessageBody)
 		log.Printf("Created new message with scalar clock %v\n", newMessage.GetTimestamp())
 
 		for _, ch := range h.vectorialMessagesChs {

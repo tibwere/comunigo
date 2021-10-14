@@ -15,20 +15,23 @@ type P2PVectorialGRPCHandler struct {
 	peerStatus           *peer.Status
 	vectorialMessagesChs []chan *proto.VectorialClockMessage
 	vectorialClock       []uint64
-	mu                   sync.Mutex
+	clockMu              sync.Mutex
 	pendingMsg           []*proto.VectorialClockMessage
 	memberIndexs         map[string]int
+	receivedCh           chan *proto.VectorialClockMessage
 }
 
 func NewP2PVectorialGRPCHandler(port uint16, status *peer.Status) *P2PVectorialGRPCHandler {
 	h := &P2PVectorialGRPCHandler{
-		comunicationPort:     port,
-		peerStatus:           status,
-		vectorialMessagesChs: []chan *proto.VectorialClockMessage{},
-		vectorialClock:       make([]uint64, len(status.OtherMembers)+1),
-		mu:                   sync.Mutex{},
-		pendingMsg:           []*proto.VectorialClockMessage{},
-		memberIndexs:         initializeClockEntries(status),
+		UnimplementedComunigoServer: proto.UnimplementedComunigoServer{},
+		comunicationPort:            port,
+		peerStatus:                  status,
+		vectorialMessagesChs:        []chan *proto.VectorialClockMessage{},
+		vectorialClock:              []uint64{},
+		clockMu:                     sync.Mutex{},
+		pendingMsg:                  []*proto.VectorialClockMessage{},
+		memberIndexs:                initializeClockEntries(status),
+		receivedCh:                  make(chan *proto.VectorialClockMessage, 4*(len(status.OtherMembers)+1)),
 	}
 
 	for i := 0; i < len(h.peerStatus.OtherMembers); i++ {
@@ -60,16 +63,8 @@ func initializeClockEntries(s *peer.Status) map[string]int {
 	return indexes
 }
 
-func (h *P2PVectorialGRPCHandler) incrementClock(member string) {
+func (h *P2PVectorialGRPCHandler) incrementClockUnlocked(member string) {
 	index := h.memberIndexs[member]
-
-	h.mu.Lock()
 	h.vectorialClock[index]++
-	log.Printf(
-		"Incremented V[%v] (%v)(New vectorial clock: %v)\n",
-		index,
-		member,
-		h.vectorialClock,
-	)
-	h.mu.Unlock()
+	log.Printf("Incremented V[%v] (entry related to %v). New vectorial clock: %v\n", index, member, h.vectorialClock)
 }

@@ -122,6 +122,10 @@ func vectorialHandler(port uint16, status *peer.Status) {
 		return nil
 	})
 
+	errs.Go(func() error {
+		return p2pVectorialH.MessageQueueHandler()
+	})
+
 	if err := errs.Wait(); err != nil {
 		log.Fatalf("Something went wrong in grpc connections management (%v)", err)
 	}
