@@ -4,19 +4,19 @@ import (
 	"context"
 	"log"
 
-	"gitlab.com/tibwere/comunigo/config"
 	"gitlab.com/tibwere/comunigo/registration/grpchandler"
+	"gitlab.com/tibwere/comunigo/utilities"
 	"golang.org/x/sync/errgroup"
 	"google.golang.org/grpc"
 )
 
 func main() {
-	err := config.InitLogger("registration")
+	err := utilities.InitLogger("registration")
 	if err != nil {
 		log.Fatalf("Unable to setup log file (%v)\n", err)
 	}
 
-	cfg, err := config.SetupRegistrationServer()
+	cfg, err := utilities.SetupRegistrationServer()
 	if err != nil {
 		log.Fatalf("Unable to load configurations (%v)\n", err)
 	}

@@ -5,9 +5,9 @@ import (
 	"log"
 	"os"
 
-	"gitlab.com/tibwere/comunigo/config"
 	"gitlab.com/tibwere/comunigo/proto"
 	"gitlab.com/tibwere/comunigo/sequencer/grpchandler"
+	"gitlab.com/tibwere/comunigo/utilities"
 	"golang.org/x/sync/errgroup"
 	"google.golang.org/grpc"
 )
@@ -15,13 +15,13 @@ import (
 func main() {
 
 	// Inizializzazione dell'attività di logging su file dedicato
-	err := config.InitLogger("sequencer")
+	err := utilities.InitLogger("sequencer")
 	if err != nil {
 		log.Fatalf("Unable to setup log file (%v)\n", err)
 	}
 
 	// Retrieve delle impostazioni di configurazione dall'ambiente
-	cfg, err := config.SetupSequencer()
+	cfg, err := utilities.SetupSequencer()
 	if err != nil {
 		log.Fatalf("Unable to load configurations (%v)\n", err)
 	}
