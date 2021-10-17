@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 	"io"
+	"log"
 
 	"gitlab.com/tibwere/comunigo/proto"
 	"google.golang.org/grpc"
@@ -35,7 +36,7 @@ func (h *ToRegisterGRPCHandler) getOtherMembers(currUser string, stream proto.Re
 	}
 }
 
-func (h *ToRegisterGRPCHandler) SignToRegister() error {
+func (h *ToRegisterGRPCHandler) SignToRegister(ctx context.Context) error {
 	var currUser string
 
 	conn, err := grpc.Dial(
@@ -48,26 +49,36 @@ func (h *ToRegisterGRPCHandler) SignToRegister() error {
 	}
 	defer conn.Close()
 
+	if h.verbose {
+		log.Printf("Connection established to: %v:%v\n", h.registerAddr, h.registerPort)
+	}
+
 	c := proto.NewRegistrationClient(conn)
 
 	for {
-		currUser = <-h.peerStatus.UsernameCh
-		stream, err := c.Sign(context.Background(), &proto.NewUser{
-			Username: currUser,
-		})
-		if err != nil {
-			return err
-		}
+		select {
+		case <-ctx.Done():
+			log.Println("Registration client shutdown")
+			return fmt.Errorf("signal caught")
 
-		loopAgain, err := h.getOtherMembers(currUser, stream)
-		if err != nil {
-			return nil
-		}
+		case currUser = <-h.peerStatus.UsernameCh:
+			stream, err := c.Sign(context.Background(), &proto.NewUser{
+				Username: currUser,
+			})
+			if err != nil {
+				return err
+			}
 
-		if !loopAgain {
-			h.peerStatus.CurrentUsername = currUser
-			h.peerStatus.DoneCh <- true
-			return nil
+			loopAgain, err := h.getOtherMembers(currUser, stream)
+			if err != nil {
+				return err
+			}
+
+			if !loopAgain {
+				h.peerStatus.CurrentUsername = currUser
+				h.peerStatus.DoneCh <- true
+				return nil
+			}
 		}
 	}
 }

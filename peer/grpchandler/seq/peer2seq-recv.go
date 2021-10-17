@@ -18,14 +18,19 @@ func (s *ToSequencerGRPCHandler) SendFromSequencerToPeer(ctx context.Context, in
 	return &empty.Empty{}, nil
 }
 
-func (h *ToSequencerGRPCHandler) ReceiveMessages() error {
+func (h *ToSequencerGRPCHandler) ReceiveMessages(ctx context.Context) error {
 	lis, err := net.Listen("tcp", fmt.Sprintf(":%v", h.comunicationPort))
 	if err != nil {
 		return err
 	}
 	grpcServer := grpc.NewServer()
-
 	proto.RegisterComunigoServer(grpcServer, h)
+
+	go func() {
+		<-ctx.Done()
+		log.Println("Message receiver from sequencer shutdown")
+		grpcServer.GracefulStop()
+	}()
 
 	grpcServer.Serve(lis)
 

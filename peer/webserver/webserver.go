@@ -1,12 +1,14 @@
 package webserver
 
 import (
+	"context"
 	"encoding/json"
 	"fmt"
 	"log"
 	"net/http"
 	"os"
 	"sync"
+	"time"
 
 	"github.com/labstack/echo/v4"
 	"github.com/labstack/echo/v4/middleware"
@@ -48,7 +50,7 @@ func (ws *WebServer) initLogger(e *echo.Echo) {
 	e.Logger.SetOutput(logFile)
 }
 
-func (ws *WebServer) Startup(wg *sync.WaitGroup) {
+func (ws *WebServer) Startup(ctx context.Context, wg *sync.WaitGroup) {
 	defer wg.Done()
 
 	e := echo.New()
@@ -57,8 +59,17 @@ func (ws *WebServer) Startup(wg *sync.WaitGroup) {
 	}))
 	e.Use(middleware.Recover())
 	e.HideBanner = true
-
 	ws.initLogger(e)
+
+	go func() {
+		<-ctx.Done()
+		log.Println("Webserver shutdown")
+		timedCtx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+		defer cancel()
+		if err := e.Shutdown(timedCtx); err != nil {
+			log.Printf("Unable to shutdown server (%v", err)
+		}
+	}()
 
 	e.Static(RouteRoot, "/assets")
 	e.GET(RouteRoot, ws.mainPageHandler)
