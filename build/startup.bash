@@ -1,7 +1,7 @@
 #!/bin/bash
 
 usage() {
-    echo "Usage: ${0} -n <number-of-peers> -t sequencer | scalar [-v verbose]"
+    echo "Usage: ${0} -n <number-of-peers> -t sequencer | scalar [-v verbose -a attach]"
 }
 
 SIZE=3
@@ -12,9 +12,10 @@ CONFIG_FILE="./comunigo.cfg"
 ENV_FILE="./.env"
 TOS=""
 PROJ_NAME=comunigo
+DETACH="-d"
 
 # Parse command line options
-while getopts ":hn:vt:" opt; do
+while getopts ":hn:vt:a" opt; do
     case ${opt} in
         h ) 
             usage
@@ -29,6 +30,9 @@ while getopts ":hn:vt:" opt; do
             ;;
         t )
             TOS=${OPTARG}
+            ;;
+        a )
+            DETACH=""
             ;;
         ? )
             usage
@@ -72,5 +76,5 @@ echo "[+] Created environment file for docker-compose"
 
 # Run containers
 echo -e "[+] Startup ${SIZE} peers, sequencer and register services ..."
-docker-compose -f ${DC_FILE} --env-file ${ENV_FILE} --project-name ${PROJ_NAME} up -d --scale peer_ms=${SIZE} --build
+docker-compose -f ${DC_FILE} --env-file ${ENV_FILE} --project-name ${PROJ_NAME} up ${DETACH} --scale peer_ms=${SIZE} --build
 
