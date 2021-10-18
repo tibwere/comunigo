@@ -12,16 +12,19 @@ import (
 	"google.golang.org/grpc"
 )
 
-func (h *P2PScalarGRPCHandler) ReceiveMessages() error {
+func (h *P2PScalarGRPCHandler) ReceiveMessages(ctx context.Context) error {
 	lis, err := net.Listen("tcp", fmt.Sprintf(":%v", h.comunicationPort))
 	if err != nil {
 		return err
 	}
 	grpcServer := grpc.NewServer()
 	proto.RegisterComunigoServer(grpcServer, h)
-	grpcServer.Serve(lis)
+	go grpcServer.Serve(lis)
 
-	return nil
+	<-ctx.Done()
+	log.Println("Message receiver from sequencer shutdown")
+	grpcServer.GracefulStop()
+	return fmt.Errorf("signal caught")
 }
 
 func (h *P2PScalarGRPCHandler) tryToDeliverToDatastore() {

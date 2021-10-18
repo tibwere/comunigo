@@ -63,7 +63,7 @@ func internalLogic(ctx context.Context, cfg *utilities.PeerConfig, status *peer.
 	case "sequencer":
 		sequencerHandler(ctx, cfg.SeqHostname, cfg.ChatPort, cfg.EnableVerbose, status)
 	case "scalar":
-		scalarHandler(cfg.ChatPort, status)
+		scalarHandler(ctx, cfg.ChatPort, status)
 	case "vectorial":
 		vectorialHandler(cfg.ChatPort, status)
 	default:
@@ -81,7 +81,7 @@ func sequencerHandler(ctx context.Context, addr string, port uint16, verbose boo
 
 		err := seqH.ReceiveMessages(ctx)
 		if err != nil {
-			log.Printf("Unable to inizialize gRPC server (%v)", err)
+			log.Printf("Unable to receive messages anymore (%v)", err)
 		}
 	}()
 
@@ -97,27 +97,34 @@ func sequencerHandler(ctx context.Context, addr string, port uint16, verbose boo
 	wg.Wait()
 }
 
-func scalarHandler(port uint16, status *peer.Status) {
+func scalarHandler(ctx context.Context, port uint16, status *peer.Status) {
 	p2pScalarH := scalar.NewP2PScalarGRPCHandler(port, status)
+	var wg sync.WaitGroup
 
-	errs, _ := errgroup.WithContext(context.Background())
+	wg.Add(3)
+	go func() {
+		defer wg.Done()
 
-	errs.Go(func() error {
-		return p2pScalarH.ReceiveMessages()
-	})
+		err := p2pScalarH.ReceiveMessages(ctx)
+		if err != nil {
+			log.Printf("Unable to receive messages anymore (%v)", err)
+		}
+	}()
 
-	errs.Go(func() error {
-		return p2pScalarH.ConnectToPeers()
-	})
+	go func() {
+		defer wg.Done()
+		err := p2pScalarH.ConnectToPeers(ctx)
+		if err != nil {
+			log.Printf("Sender routines has stopped (%v)", err)
+		}
+	}()
 
-	errs.Go(func() error {
-		p2pScalarH.MultiplexMessages()
-		return nil
-	})
+	go func() {
+		defer wg.Done()
+		p2pScalarH.MultiplexMessages(ctx)
+	}()
 
-	if err := errs.Wait(); err != nil {
-		log.Fatalf("Something went wrong in grpc connections management (%v)", err)
-	}
+	wg.Wait()
 }
 
 func vectorialHandler(port uint16, status *peer.Status) {
