@@ -26,13 +26,10 @@ func (h *ToSequencerGRPCHandler) ReceiveMessages(ctx context.Context) error {
 	grpcServer := grpc.NewServer()
 	proto.RegisterComunigoServer(grpcServer, h)
 
-	go func() {
-		<-ctx.Done()
-		log.Println("Message receiver from sequencer shutdown")
-		grpcServer.GracefulStop()
-	}()
+	go grpcServer.Serve(lis)
 
-	grpcServer.Serve(lis)
-
-	return nil
+	<-ctx.Done()
+	log.Println("Message receiver from sequencer shutdown")
+	grpcServer.GracefulStop()
+	return fmt.Errorf("signal caught")
 }
