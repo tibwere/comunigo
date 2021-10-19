@@ -109,7 +109,7 @@ func (s *RegistrationServer) Sign(in *proto.NewUser, stream proto.Registration_S
 		}
 		return nil
 	} else {
-		return status.Errorf(codes.InvalidArgument, "Username already in use!")
+		return status.Errorf(codes.InvalidArgument, "Username already in use, please retry with another one!")
 	}
 }
 

@@ -25,7 +25,7 @@ func (h *P2PScalarGRPCHandler) MultiplexMessages(ctx context.Context) {
 		case <-ctx.Done():
 			log.Println("Messages multiplexer shutdown")
 			return
-		case newMessageBody := <-h.peerStatus.RawMessageCh:
+		case newMessageBody := <-h.peerStatus.FrontBackCh:
 
 			log.Printf("Received from frontend: %v\n", newMessageBody)
 			h.lockScalar.Lock()

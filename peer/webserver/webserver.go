@@ -19,6 +19,7 @@ const (
 	RouteSing = "/sign"
 	RouteSend = "/send"
 	RouteList = "/list"
+	RouteInfo = "/info"
 	RouteRoot = "/"
 )
 
@@ -76,6 +77,7 @@ func (ws *WebServer) Startup(ctx context.Context, wg *sync.WaitGroup) {
 	e.POST(RouteList, ws.updateMessageList)
 	e.POST(RouteSing, ws.signNewUserHandler)
 	e.POST(RouteSend, ws.sendMessageHandler)
+	e.POST(RouteInfo, ws.retrieveInfo)
 	e.Logger.Fatal(e.Start(fmt.Sprintf(":%v", ws.port)))
 }
 
@@ -95,6 +97,18 @@ func (ws *WebServer) getListOfOtherUsername() []string {
 	}
 
 	return usernames
+}
+
+func (ws *WebServer) retrieveInfo(c echo.Context) error {
+	if ws.peerStatus.CurrentUsername == "" {
+		return c.NoContent(http.StatusForbidden)
+	} else {
+		return sendJSONString(c, map[string]interface{}{
+			"Tos":      ws.tos,
+			"Username": ws.peerStatus.CurrentUsername,
+			"Members":  ws.getListOfOtherUsername(),
+		})
+	}
 }
 
 func (ws *WebServer) updateMessageList(c echo.Context) error {
@@ -121,22 +135,20 @@ func (ws *WebServer) mainPageHandler(c echo.Context) error {
 
 func (ws *WebServer) signNewUserHandler(c echo.Context) error {
 	if ws.peerStatus.CurrentUsername == "" {
-		ws.peerStatus.UsernameCh <- c.FormValue("username")
+		ws.peerStatus.FrontBackCh <- c.FormValue("username")
 
-		select {
-		case <-ws.peerStatus.DoneCh:
+		result := <-ws.peerStatus.FrontBackCh
+		if result == "SUCCESS" {
 			return sendJSONString(c, map[string]interface{}{
-				"Tos":      ws.tos,
-				"Username": ws.peerStatus.CurrentUsername,
-				"Members":  ws.getListOfOtherUsername(),
+				"Status": result,
 			})
-
-		case <-ws.peerStatus.InvalidCh:
+		} else {
 			return sendJSONString(c, map[string]interface{}{
-				"IsError":      true,
-				"ErrorMessage": "Username already in use, please retry with another one!",
+				"Status":  "ERROR",
+				"Message": "Username already in use, please retry with another one!",
 			})
 		}
+
 	} else {
 		return c.NoContent(http.StatusForbidden)
 	}
@@ -146,7 +158,7 @@ func (ws *WebServer) sendMessageHandler(c echo.Context) error {
 	if ws.peerStatus.CurrentUsername == "" {
 		return c.NoContent(http.StatusForbidden)
 	} else {
-		ws.peerStatus.RawMessageCh <- c.FormValue("message")
+		ws.peerStatus.FrontBackCh <- c.FormValue("message")
 		return c.NoContent(http.StatusOK)
 	}
 }

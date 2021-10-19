@@ -9,10 +9,7 @@ type Status struct {
 	CurrentUsername string
 	OtherMembers    []*proto.PeerInfo
 	Datastore       *redis.Client
-	UsernameCh      chan string
-	InvalidCh       chan bool
-	DoneCh          chan bool
-	RawMessageCh    chan string
+	FrontBackCh     chan string
 	PublicIP        string
 }
 
@@ -25,10 +22,7 @@ func Init(redisAddr string) (*Status, error) {
 			CurrentUsername: "",
 			OtherMembers:    []*proto.PeerInfo{},
 			Datastore:       InitDatastore(redisAddr),
-			UsernameCh:      make(chan string),
-			InvalidCh:       make(chan bool),
-			DoneCh:          make(chan bool),
-			RawMessageCh:    make(chan string),
+			FrontBackCh:     make(chan string),
 			PublicIP:        ip,
 		}, nil
 	}

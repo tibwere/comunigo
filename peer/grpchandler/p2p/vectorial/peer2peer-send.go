@@ -26,7 +26,7 @@ func (h *P2PVectorialGRPCHandler) encapsulateMessage(body string) *proto.Vectori
 func (h *P2PVectorialGRPCHandler) MultiplexMessages() {
 
 	for {
-		newMessageBody := <-h.peerStatus.RawMessageCh
+		newMessageBody := <-h.peerStatus.FrontBackCh
 
 		log.Printf("Received from frontend: %v\n", newMessageBody)
 		newMessage := h.encapsulateMessage(newMessageBody)

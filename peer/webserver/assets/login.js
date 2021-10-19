@@ -13,12 +13,10 @@ $("#signform").submit(function (e) {
             "username" : $("#username").val()
         },
         success: function (response) {
-
             console.log(response)
-            
-            decoded = $.parseJSON(response)
-            if (decoded.IsError == true) {
-                $("#errorMsg").html(decoded.ErrorMessage)
+            result = $.parseJSON(response)
+            if (result.Status == "ERROR") {
+                $("#errorMsg").html(result.Message)
                 $("#errorMsg").fadeIn()
 
                 $("#signBtn").empty()
@@ -29,7 +27,6 @@ $("#signform").submit(function (e) {
                     $("#errorMsg").fadeOut()
                 }, 1500)
             } else {
-                sessionStorage.setItem("comunigo-metadata", response)
                 window.location = "index.html"
             }            
         }

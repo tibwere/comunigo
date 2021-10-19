@@ -23,7 +23,7 @@ func (h *ToRegisterGRPCHandler) getOtherMembers(currUser string, stream proto.Re
 		if err != nil {
 			errStatus, _ := status.FromError(err)
 			if codes.InvalidArgument == errStatus.Code() {
-				h.peerStatus.InvalidCh <- true
+				h.peerStatus.FrontBackCh <- errStatus.Message()
 				return true, nil
 			} else {
 				return false, err
@@ -61,7 +61,7 @@ func (h *ToRegisterGRPCHandler) SignToRegister(ctx context.Context) error {
 			log.Println("Registration client shutdown")
 			return fmt.Errorf("signal caught")
 
-		case currUser = <-h.peerStatus.UsernameCh:
+		case currUser = <-h.peerStatus.FrontBackCh:
 			stream, err := c.Sign(context.Background(), &proto.NewUser{
 				Username: currUser,
 			})
@@ -76,7 +76,7 @@ func (h *ToRegisterGRPCHandler) SignToRegister(ctx context.Context) error {
 
 			if !loopAgain {
 				h.peerStatus.CurrentUsername = currUser
-				h.peerStatus.DoneCh <- true
+				h.peerStatus.FrontBackCh <- "SUCCESS"
 				return nil
 			}
 		}

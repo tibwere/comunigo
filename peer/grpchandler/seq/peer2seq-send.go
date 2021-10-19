@@ -28,7 +28,7 @@ func (h *ToSequencerGRPCHandler) SendMessagesToSequencer(ctx context.Context) er
 		case <-ctx.Done():
 			log.Println("Message sender to sequencer shutdown")
 			return fmt.Errorf("signal caught")
-		case newMessageBody := <-h.peerStatus.RawMessageCh:
+		case newMessageBody := <-h.peerStatus.FrontBackCh:
 			peer.WaitBeforeSend()
 			_, err := c.SendFromPeerToSequencer(context.Background(), &proto.RawMessage{
 				From: h.peerStatus.CurrentUsername,

@@ -1,11 +1,18 @@
 $( document ).ready(function() {
-    metadata = $.parseJSON(sessionStorage.getItem("comunigo-metadata"))
-    sessionStorage.setItem("currentUser", metadata.Username)
-    document.title = metadata.Username + " - comuniGO"
-
-    $("#me").text(metadata.Username)
-    $("#tos").text(metadata.Tos)
-    metadata.Members.forEach(m => $("#memberList").append('<li class="list-group-item list-group-item-warning"><strong class="text-primary">' + m + '</strong></li>'))
+    
+    $.ajax({
+        type: "POST",
+        url: "info",
+        success: function (response) {
+            result = $.parseJSON(response)
+            sessionStorage.setItem("currentUser", result.Username)
+            document.title = result.Username + " - comuniGO"
+        
+            $("#me").text(result.Username)
+            $("#tos").text(result.Tos)
+            result.Members.forEach(m => $("#memberList").append('<li class="list-group-item list-group-item-warning"><strong class="text-primary">' + m + '</strong></li>'))          
+        }
+    });
 });
 
 $("#sendForm").submit(function (e) { 
