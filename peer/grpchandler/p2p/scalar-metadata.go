@@ -145,7 +145,7 @@ func (m *ScalarMetadata) PushIntoPendingList(mess *proto.ScalarClockMessage) {
 func (m *ScalarMetadata) SyncDatastore(ds *redis.Client, currUser string, others []*proto.PeerInfo) error {
 	for _, mess := range m.deliverMessagesIfPossible(others) {
 		log.Printf("Delivered new message (Clock: %v - From: %v)\n", mess.GetTimestamp(), mess.GetFrom())
-		if err := peer.InsertScalarClockMessage(ds, currUser, mess); err != nil {
+		if err := peer.RPUSHMessage(ds, currUser, mess); err != nil {
 			return err
 		}
 	}

@@ -103,30 +103,29 @@ func p2pHandler(ctx context.Context, port uint16, status *peer.Status, modality 
 	go func() {
 		defer wg.Done()
 
-		err := hnd.ReceiveMessages(ctx)
-		if err != nil {
+		if err := hnd.ReceiveMessages(ctx); err != nil {
 			log.Printf("Unable to receive messages anymore (%v)", err)
 		}
 	}()
 
 	go func() {
 		defer wg.Done()
-		err := hnd.ConnectToPeers(ctx)
-		if err != nil {
+		if err := hnd.ConnectToPeers(ctx); err != nil {
 			log.Printf("Sender routines has stopped (%v)", err)
 		}
 	}()
 
 	go func() {
 		defer wg.Done()
-		hnd.MultiplexMessages(ctx)
+		if err := hnd.MultiplexMessages(ctx); err != nil {
+			log.Printf("Messages multiplexer shutdown (%v)", err)
+		}
 	}()
 
 	go func() {
 		defer wg.Done()
 
-		err := hnd.MessageQueueHandler(ctx)
-		if err != nil {
+		if err := hnd.MessageQueueHandler(ctx); err != nil {
 			log.Printf("Message queue handler failed (%v)", err)
 		}
 	}()

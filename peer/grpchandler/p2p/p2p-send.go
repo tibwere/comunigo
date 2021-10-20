@@ -10,12 +10,11 @@ import (
 	"google.golang.org/grpc"
 )
 
-func (h *P2PHandler) MultiplexMessages(ctx context.Context) {
+func (h *P2PHandler) MultiplexMessages(ctx context.Context) error {
 	for {
 		select {
 		case <-ctx.Done():
-			log.Println("Messages multiplexer shutdown")
-			return
+			return fmt.Errorf("signal caught")
 		case newMessageBody := <-h.peerStatus.FrontBackCh:
 			log.Printf("Received from frontend: %v\n", newMessageBody)
 
@@ -28,7 +27,9 @@ func (h *P2PHandler) MultiplexMessages(ctx context.Context) {
 				newMessage := h.vData.GenerateNewMessage(h.peerStatus.CurrentUsername, newMessageBody)
 				log.Printf("Created new message with vectorial clock %v\n", newMessage.GetTimestamp())
 
-				h.vData.SendToAll(newMessage, h.peerStatus.Datastore, h.peerStatus.CurrentUsername)
+				if err := h.vData.SendToAll(newMessage, h.peerStatus.Datastore, h.peerStatus.CurrentUsername); err != nil {
+					return err
+				}
 			}
 
 		}

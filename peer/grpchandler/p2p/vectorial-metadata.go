@@ -81,14 +81,14 @@ func (m *VectorialMetadata) incrementClockUnlocked(member string) {
 	log.Printf("Incremented V[%v] (entry related to %v). New vectorial clock: %v\n", index, member, m.clock)
 }
 
-func (m *VectorialMetadata) SendToAll(mess *proto.VectorialClockMessage, ds *redis.Client, currUser string) {
+func (m *VectorialMetadata) SendToAll(mess *proto.VectorialClockMessage, ds *redis.Client, currUser string) error {
 	for _, ch := range m.vectorialMessagesChs {
 		ch <- mess
 	}
 
 	// Questo messaggio può essere direttamente consegnato perché di sicuro
 	// rispetta la causalità
-	peer.InsertVectorialClockMessage(ds, currUser, mess)
+	return peer.RPUSHMessage(ds, currUser, mess)
 }
 
 func (m *VectorialMetadata) GetIncomingMsgToBeSentCh(index int) <-chan *proto.VectorialClockMessage {
@@ -114,7 +114,7 @@ func (m *VectorialMetadata) SyncDatastore(ds *redis.Client, currUser string) err
 		m.incrementClockUnlocked(mess.From)
 		m.clockMu.Unlock()
 
-		if err := peer.InsertVectorialClockMessage(ds, currUser, mess); err != nil {
+		if err := peer.RPUSHMessage(ds, currUser, mess); err != nil {
 			return err
 		}
 	}

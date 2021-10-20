@@ -6,8 +6,8 @@ import (
 	"log"
 
 	"github.com/go-redis/redis/v8"
-	"gitlab.com/tibwere/comunigo/proto"
 	"google.golang.org/protobuf/encoding/protojson"
+	"google.golang.org/protobuf/reflect/protoreflect"
 )
 
 func InitDatastore(addr string) *redis.Client {
@@ -18,42 +18,7 @@ func InitDatastore(addr string) *redis.Client {
 	})
 }
 
-func InsertSequencerMessage(ds *redis.Client, key string, message *proto.SequencerMessage) error {
-
-	enc := &protojson.MarshalOptions{
-		Multiline:       false,
-		EmitUnpopulated: true,
-	}
-
-	byteMessage, err := enc.Marshal(message)
-	if err != nil {
-		return err
-	} else {
-		val := string(byteMessage)
-		log.Printf("RPush into redis at key %v val: %v\n", key, val)
-		return ds.RPush(context.Background(), key, val).Err()
-	}
-}
-
-func InsertScalarClockMessage(ds *redis.Client, key string, message *proto.ScalarClockMessage) error {
-
-	enc := &protojson.MarshalOptions{
-		Multiline:       false,
-		EmitUnpopulated: true,
-	}
-
-	byteMessage, err := enc.Marshal(message)
-	if err != nil {
-		return err
-	} else {
-		val := string(byteMessage)
-		log.Printf("RPush into redis at key %v val: %v\n", key, val)
-		return ds.RPush(context.Background(), key, val).Err()
-	}
-}
-
-func InsertVectorialClockMessage(ds *redis.Client, key string, message *proto.VectorialClockMessage) error {
-
+func RPUSHMessage(ds *redis.Client, key string, message protoreflect.ProtoMessage) error {
 	enc := &protojson.MarshalOptions{
 		Multiline:       false,
 		EmitUnpopulated: true,

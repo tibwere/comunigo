@@ -14,7 +14,7 @@ import (
 
 func (s *ToSequencerGRPCHandler) SendFromSequencerToPeer(ctx context.Context, in *proto.SequencerMessage) (*empty.Empty, error) {
 	log.Printf("Received '%v' from %v (ID: %v)", in.GetBody(), in.GetFrom(), in.GetTimestamp())
-	peer.InsertSequencerMessage(s.peerStatus.Datastore, s.peerStatus.CurrentUsername, in)
+	peer.RPUSHMessage(s.peerStatus.Datastore, s.peerStatus.CurrentUsername, in)
 	return &empty.Empty{}, nil
 }
 
