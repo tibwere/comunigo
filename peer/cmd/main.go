@@ -15,7 +15,6 @@ import (
 	"gitlab.com/tibwere/comunigo/peer/grpchandler/seq"
 	"gitlab.com/tibwere/comunigo/peer/webserver"
 	"gitlab.com/tibwere/comunigo/utilities"
-	"golang.org/x/sync/errgroup"
 )
 
 func main() {
@@ -65,7 +64,7 @@ func internalLogic(ctx context.Context, cfg *utilities.PeerConfig, status *peer.
 	case "scalar":
 		scalarHandler(ctx, cfg.ChatPort, status)
 	case "vectorial":
-		vectorialHandler(cfg.ChatPort, status)
+		vectorialHandler(ctx, cfg.ChatPort, status)
 	default:
 		log.Println("TOS not expected")
 	}
@@ -127,29 +126,42 @@ func scalarHandler(ctx context.Context, port uint16, status *peer.Status) {
 	wg.Wait()
 }
 
-func vectorialHandler(port uint16, status *peer.Status) {
+func vectorialHandler(ctx context.Context, port uint16, status *peer.Status) {
 	p2pVectorialH := vectorial.NewP2PVectorialGRPCHandler(port, status)
+	var wg sync.WaitGroup
 
-	errs, _ := errgroup.WithContext(context.Background())
+	wg.Add(4)
+	go func() {
+		defer wg.Done()
 
-	errs.Go(func() error {
-		return p2pVectorialH.ReceiveMessages()
-	})
+		err := p2pVectorialH.ReceiveMessages(ctx)
+		if err != nil {
+			log.Printf("Unable to receive messages anymore (%v)", err)
+		}
+	}()
 
-	errs.Go(func() error {
-		return p2pVectorialH.ConnectToPeers()
-	})
+	go func() {
+		defer wg.Done()
 
-	errs.Go(func() error {
-		p2pVectorialH.MultiplexMessages()
-		return nil
-	})
+		err := p2pVectorialH.ConnectToPeers(ctx)
+		if err != nil {
+			log.Printf("Sender routines has stopped (%v)", err)
+		}
+	}()
 
-	errs.Go(func() error {
-		return p2pVectorialH.MessageQueueHandler()
-	})
+	go func() {
+		defer wg.Done()
+		p2pVectorialH.MultiplexMessages(ctx)
+	}()
 
-	if err := errs.Wait(); err != nil {
-		log.Fatalf("Something went wrong in grpc connections management (%v)", err)
-	}
+	go func() {
+		defer wg.Done()
+
+		err := p2pVectorialH.MessageQueueHandler(ctx)
+		if err != nil {
+			log.Printf("Message queue handler failed (%v)", err)
+		}
+	}()
+
+	wg.Wait()
 }

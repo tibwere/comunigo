@@ -12,36 +12,42 @@ import (
 	"google.golang.org/grpc"
 )
 
-func (h *P2PVectorialGRPCHandler) ReceiveMessages() error {
+func (h *P2PVectorialGRPCHandler) ReceiveMessages(ctx context.Context) error {
 	lis, err := net.Listen("tcp", fmt.Sprintf(":%v", h.comunicationPort))
 	if err != nil {
 		return err
 	}
 	grpcServer := grpc.NewServer()
 	proto.RegisterComunigoServer(grpcServer, h)
-	grpcServer.Serve(lis)
+	go grpcServer.Serve(lis)
 
-	return nil
+	<-ctx.Done()
+	log.Println("Message receiver from sequencer shutdown")
+	grpcServer.GracefulStop()
+	return fmt.Errorf("signal caught")
 }
 
-func (h *P2PVectorialGRPCHandler) MessageQueueHandler() error {
+func (h *P2PVectorialGRPCHandler) MessageQueueHandler(ctx context.Context) error {
 	for {
-		newMessage := <-h.receivedCh
+		select {
+		case <-ctx.Done():
+			return fmt.Errorf("signal caught")
+		case newMessage := <-h.receivedCh:
+			h.pendingMsg = append(h.pendingMsg, newMessage)
+			deliverables := h.tryToDeliverToDatastore()
+			log.Printf("%v new message can be delivered\n", len(deliverables))
 
-		h.pendingMsg = append(h.pendingMsg, newMessage)
-		deliverables := h.tryToDeliverToDatastore()
-		log.Printf("%v new message can be delivered\n", len(deliverables))
+			if len(deliverables) != 0 {
+				for _, mess := range deliverables {
+					log.Printf("Delivering new message: Timestamp: %v, From: %v, Body: '%v'\n", mess.Timestamp, mess.From, mess.Body)
 
-		if len(deliverables) != 0 {
-			for _, mess := range deliverables {
-				log.Printf("Delivering new message: Timestamp: %v, From: %v, Body: '%v'\n", mess.Timestamp, mess.From, mess.Body)
+					h.clockMu.Lock()
+					h.incrementClockUnlocked(mess.From)
+					h.clockMu.Unlock()
 
-				h.clockMu.Lock()
-				h.incrementClockUnlocked(mess.From)
-				h.clockMu.Unlock()
-
-				if err := peer.InsertVectorialClockMessage(h.peerStatus.Datastore, h.peerStatus.CurrentUsername, mess); err != nil {
-					return err
+					if err := peer.InsertVectorialClockMessage(h.peerStatus.Datastore, h.peerStatus.CurrentUsername, mess); err != nil {
+						return err
+					}
 				}
 			}
 		}

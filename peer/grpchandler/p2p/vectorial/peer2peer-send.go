@@ -23,38 +23,55 @@ func (h *P2PVectorialGRPCHandler) encapsulateMessage(body string) *proto.Vectori
 	return newMessage
 }
 
-func (h *P2PVectorialGRPCHandler) MultiplexMessages() {
+func (h *P2PVectorialGRPCHandler) MultiplexMessages(ctx context.Context) {
 
 	for {
-		newMessageBody := <-h.peerStatus.FrontBackCh
+		select {
+		case <-ctx.Done():
+			log.Println("Messages multiplexer shutdown")
+			return
+		case newMessageBody := <-h.peerStatus.FrontBackCh:
+			log.Printf("Received from frontend: %v\n", newMessageBody)
+			newMessage := h.encapsulateMessage(newMessageBody)
+			log.Printf("Created new message with scalar clock %v\n", newMessage.GetTimestamp())
 
-		log.Printf("Received from frontend: %v\n", newMessageBody)
-		newMessage := h.encapsulateMessage(newMessageBody)
-		log.Printf("Created new message with scalar clock %v\n", newMessage.GetTimestamp())
+			for _, ch := range h.vectorialMessagesChs {
+				ch <- newMessage
+			}
 
-		for _, ch := range h.vectorialMessagesChs {
-			ch <- newMessage
+			// Questo messaggio può essere direttamente consegnato perché di sicuro
+			// rispetta la causalità
+			peer.InsertVectorialClockMessage(h.peerStatus.Datastore, h.peerStatus.CurrentUsername, newMessage)
 		}
-
-		// Questo messaggio può essere direttamente consegnato perché di sicuro
-		// rispetta la causalità
-		peer.InsertVectorialClockMessage(h.peerStatus.Datastore, h.peerStatus.CurrentUsername, newMessage)
 	}
 }
 
-func (h *P2PVectorialGRPCHandler) ConnectToPeers() error {
+func (h *P2PVectorialGRPCHandler) ConnectToPeers(ctx context.Context) error {
 	errCh := make(chan error)
 
 	for i := range h.peerStatus.OtherMembers {
-		go func(index int, errCh chan error) {
-			h.sendMessagesToOtherPeers(index, errCh)
-		}(i, errCh)
+		index := i
+		go func() {
+			err := h.sendMessagesToOtherPeers(ctx, index)
+			if err != nil {
+				errCh <- err
+			}
+		}()
 	}
 
-	return <-errCh
+	errMsg := ""
+	for i := range h.peerStatus.OtherMembers {
+		if len(errMsg) != 0 {
+			errMsg = fmt.Sprintf("%v, %v->%v", errMsg, i, <-errCh)
+		} else {
+			errMsg = fmt.Sprintf("%v->%v", i, <-errCh)
+		}
+	}
+
+	return fmt.Errorf(errMsg)
 }
 
-func (h *P2PVectorialGRPCHandler) sendMessagesToOtherPeers(index int, errCh chan error) {
+func (h *P2PVectorialGRPCHandler) sendMessagesToOtherPeers(ctx context.Context, index int) error {
 
 	conn, err := grpc.Dial(
 		fmt.Sprintf("%v:%v", h.peerStatus.OtherMembers[index].GetAddress(), h.comunicationPort),
@@ -62,8 +79,7 @@ func (h *P2PVectorialGRPCHandler) sendMessagesToOtherPeers(index int, errCh chan
 		grpc.WithBlock(),
 	)
 	if err != nil {
-		errCh <- err
-		return
+		return err
 	}
 	defer conn.Close()
 
@@ -72,13 +88,17 @@ func (h *P2PVectorialGRPCHandler) sendMessagesToOtherPeers(index int, errCh chan
 	c := proto.NewComunigoClient(conn)
 
 	for {
-		newMessage := <-h.vectorialMessagesChs[index]
-		peer.WaitBeforeSend()
-		log.Printf("Sending [%v] to %v@%v\n", newMessage, h.peerStatus.OtherMembers[index].Username, h.peerStatus.OtherMembers[index].Address)
-		_, err := c.SendUpdateP2PVectorial(context.Background(), newMessage)
-		if err != nil {
-			errCh <- err
-			return
+		select {
+		case <-ctx.Done():
+			log.Printf("Message sender %v shutdown\n", index)
+			return fmt.Errorf("signal caught")
+		case newMessage := <-h.vectorialMessagesChs[index]:
+			peer.WaitBeforeSend()
+			log.Printf("Sending [%v] to %v@%v\n", newMessage, h.peerStatus.OtherMembers[index].Username, h.peerStatus.OtherMembers[index].Address)
+			_, err := c.SendUpdateP2PVectorial(context.Background(), newMessage)
+			if err != nil {
+				return err
+			}
 		}
 	}
 }
