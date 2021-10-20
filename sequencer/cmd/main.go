@@ -1,18 +1,19 @@
 package main
 
 import (
-	"context"
 	"log"
 	"os"
+	"sync"
 
 	"gitlab.com/tibwere/comunigo/proto"
 	"gitlab.com/tibwere/comunigo/sequencer/grpchandler"
 	"gitlab.com/tibwere/comunigo/utilities"
-	"golang.org/x/sync/errgroup"
 	"google.golang.org/grpc"
 )
 
 func main() {
+	var wg sync.WaitGroup
+	ctx := utilities.GetContextForSigHandling()
 
 	// Inizializzazione dell'attività di logging su file dedicato
 	err := utilities.InitLogger("sequencer")
@@ -42,31 +43,37 @@ func main() {
 	fromRegH := grpchandler.NewFromRegisterServer(memberCh)
 	fromRegToSeqGRPCserver := grpc.NewServer()
 
-	// Retrieve dei peer dal register
-	errs, _ := errgroup.WithContext(context.Background())
-	errs.Go(func() error {
-		return fromRegH.GetPeersFromRegister(cfg.RegPort, fromRegToSeqGRPCserver)
-	})
+	wg.Add(4)
 
+	// Retrieve dei peer dal register
+	go func() {
+		defer wg.Done()
+		if err := fromRegH.GetPeersFromRegister(ctx, cfg.RegPort, fromRegToSeqGRPCserver); err != nil {
+			log.Printf("Unable to retrieve peer list (%v)", err)
+		}
+	}()
 	// Metodo buffer che non fa altro che prendere da un canale
 	// degli indirizzi ed utilizzarli per aprire nuove connessioni
-	errs.Go(func() error {
-		return seqH.StartupConnectionWithPeers(fromRegToSeqGRPCserver)
-	})
+	go func() {
+		if err := seqH.StartupConnectionWithPeers(ctx, fromRegToSeqGRPCserver); err != nil {
+			log.Printf("Unable to comunicate with peer anymore (%v)", err)
+		}
+	}()
 
 	// Routine per l'ordinamento sequenziale dei messaggi
-	errs.Go(func() error {
-		seqH.OrderMessages()
-		return nil
-	})
+	go func() {
+		if err := seqH.OrderMessages(ctx); err != nil {
+			log.Printf("Unable to order message to be delivered (%v)", err)
+		}
+	}()
 
 	// GRPC server per servire i peers con messaggi provenienti
 	// dalla routine precedente
-	errs.Go(func() error {
-		return seqH.ServePeers()
-	})
+	go func() {
+		if err := seqH.ServePeers(ctx); err != nil {
+			log.Printf("Unable to serve peers anymore (%v)", err)
+		}
+	}()
 
-	if err = errs.Wait(); err != nil {
-		log.Fatalf("Something went wrong while sending/receiving messages from peer (%v)\n", err)
-	}
+	wg.Wait()
 }

@@ -1,16 +1,18 @@
 package main
 
 import (
-	"context"
 	"log"
+	"sync"
 
 	"gitlab.com/tibwere/comunigo/registration/grpchandler"
 	"gitlab.com/tibwere/comunigo/utilities"
-	"golang.org/x/sync/errgroup"
 	"google.golang.org/grpc"
 )
 
 func main() {
+	var wg sync.WaitGroup
+	ctx := utilities.GetContextForSigHandling()
+
 	err := utilities.InitLogger("registration")
 	if err != nil {
 		log.Fatalf("Unable to setup log file (%v)\n", err)
@@ -28,18 +30,23 @@ func main() {
 	regServer := grpchandler.NewRegistrationServer(cfg.ChatGroupSize)
 	grpcServer := grpc.NewServer()
 
-	errs, _ := errgroup.WithContext(context.Background())
-	errs.Go(func() error {
-		regServer.UpdateMembers(grpcServer, cfg.SeqHostname, cfg.RegPort, cfg.TypeOfService == "sequencer")
-		return nil
-	})
-	errs.Go(func() error {
-		return grpchandler.ServeSignRequests(cfg.RegPort, regServer, grpcServer)
-	})
+	wg.Add(2)
 
-	if err = errs.Wait(); err != nil {
-		log.Fatalf("Something went wrong while serving peers (%v)\n", err)
-	}
+	go func() {
+		defer wg.Done()
+		if err := regServer.UpdateMembers(ctx, grpcServer, cfg.SeqHostname, cfg.RegPort, cfg.TypeOfService == "sequencer"); err != nil {
+			log.Printf("Unable to update members (%v)", err)
+		}
+	}()
+
+	go func() {
+		defer wg.Done()
+		if err := grpchandler.ServeSignRequests(ctx, cfg.RegPort, regServer, grpcServer); err != nil {
+			log.Printf("Unable to serve sign requests (%v)", err)
+		}
+	}()
+
+	wg.Wait()
 
 	log.Println("Registration server shutdown")
 }

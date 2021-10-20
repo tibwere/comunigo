@@ -1,8 +1,10 @@
 package grpchandler
 
 import (
+	"context"
 	"fmt"
 	"io"
+	"log"
 	"net"
 
 	"github.com/golang/protobuf/ptypes/empty"
@@ -29,7 +31,7 @@ func (s *FromRegisterServer) ExchangePeerInfoFromRegToSeq(stream proto.Registrat
 	return nil
 }
 
-func (s *FromRegisterServer) GetPeersFromRegister(port uint16, fromRegToSeqGRPCserver *grpc.Server) error {
+func (s *FromRegisterServer) GetPeersFromRegister(ctx context.Context, port uint16, fromRegToSeqGRPCserver *grpc.Server) error {
 
 	lis, err := net.Listen("tcp", fmt.Sprintf(":%v", port))
 	if err != nil {
@@ -37,7 +39,10 @@ func (s *FromRegisterServer) GetPeersFromRegister(port uint16, fromRegToSeqGRPCs
 	}
 
 	proto.RegisterRegistrationServer(fromRegToSeqGRPCserver, s)
-	fromRegToSeqGRPCserver.Serve(lis)
+	go fromRegToSeqGRPCserver.Serve(lis)
 
-	return nil
+	<-ctx.Done()
+	log.Println("Sequencer server shutdown")
+	fromRegToSeqGRPCserver.GracefulStop()
+	return fmt.Errorf("signal caught")
 }

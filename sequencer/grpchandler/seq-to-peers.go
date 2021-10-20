@@ -8,30 +8,44 @@ import (
 
 	"github.com/golang/protobuf/ptypes/empty"
 	"gitlab.com/tibwere/comunigo/proto"
-	"golang.org/x/sync/errgroup"
 	"google.golang.org/grpc"
 )
 
-func (s *SequencerServer) StartupConnectionWithPeers(fromRegToSeqGRPCserver *grpc.Server) error {
-	errs, _ := errgroup.WithContext(context.Background())
+func (s *SequencerServer) StartupConnectionWithPeers(ctx context.Context, fromRegToSeqGRPCserver *grpc.Server) error {
+	errCh := make(chan error)
 
 	for i := 0; i < int(s.chatGroupSize); i++ {
-		currentMember := <-s.memberCh
-		s.connections[currentMember.Address] = make(chan *proto.SequencerMessage)
+		select {
+		case <-ctx.Done():
+			return fmt.Errorf("signal caught")
+		case currentMember := <-s.memberCh:
+			s.connections[currentMember.Address] = make(chan *proto.SequencerMessage)
 
-		errs.Go(func() error {
-			return s.sendBackMessages(currentMember.Address)
-		})
+			go func() {
+				if err := s.sendBackMessages(ctx, currentMember.Address); err != nil {
+					errCh <- err
+				}
+			}()
+		}
 	}
 
 	// tutte le connessioni sono state aperte quindi è possibile
 	// stoppare il server GRPC
 	fromRegToSeqGRPCserver.GracefulStop()
 
-	return errs.Wait()
+	// costruzione del messaggio di errore da restituire
+	errMsg := ""
+	for addr := range s.connections {
+		errMsg += fmt.Sprintf("Handler for: %v->%v, ", addr, <-errCh)
+	}
+	// rimuove l'ulitmo ", "
+	errMsg = errMsg[:len(errMsg)-2]
+
+	return fmt.Errorf(errMsg)
+
 }
 
-func (s *SequencerServer) sendBackMessages(addr string) error {
+func (s *SequencerServer) sendBackMessages(ctx context.Context, addr string) error {
 	conn, err := grpc.Dial(
 		fmt.Sprintf("%v:%v", addr, s.port),
 		grpc.WithInsecure(),
@@ -45,10 +59,16 @@ func (s *SequencerServer) sendBackMessages(addr string) error {
 	c := proto.NewComunigoClient(conn)
 
 	for {
-		_, err = c.SendFromSequencerToPeer(context.Background(), <-s.connections[addr])
-		if err != nil {
-			return err
+		select {
+		case <-ctx.Done():
+			return fmt.Errorf("signal caught")
+		case newMessage := <-s.connections[addr]:
+			_, err = c.SendFromSequencerToPeer(context.Background(), newMessage)
+			if err != nil {
+				return err
+			}
 		}
+
 	}
 }
 
@@ -58,30 +78,37 @@ func (s *SequencerServer) SendFromPeerToSequencer(ctx context.Context, in *proto
 	return &empty.Empty{}, nil
 }
 
-func (s *SequencerServer) OrderMessages() {
+func (s *SequencerServer) OrderMessages(ctx context.Context) error {
 	for {
-		unordered := <-s.seqCh
+		select {
+		case <-ctx.Done():
+			return fmt.Errorf("signal caught")
+		case unordered := <-s.seqCh:
+			ordered := &proto.SequencerMessage{
+				Timestamp: s.sequenceNumber,
+				From:      unordered.GetFrom(),
+				Body:      unordered.GetBody(),
+			}
+			s.sequenceNumber++
 
-		ordered := &proto.SequencerMessage{
-			Timestamp: s.sequenceNumber,
-			From:      unordered.GetFrom(),
-			Body:      unordered.GetBody(),
-		}
-		s.sequenceNumber++
-
-		for _, ch := range s.connections {
-			ch <- ordered
+			for _, ch := range s.connections {
+				ch <- ordered
+			}
 		}
 	}
 }
 
-func (s *SequencerServer) ServePeers() error {
+func (s *SequencerServer) ServePeers(ctx context.Context) error {
 	lis, err := net.Listen("tcp", fmt.Sprintf(":%v", s.port))
 	if err != nil {
 		return err
 	}
 	grpcServer := grpc.NewServer()
 	proto.RegisterComunigoServer(grpcServer, s)
-	grpcServer.Serve(lis)
-	return nil
+	go grpcServer.Serve(lis)
+
+	<-ctx.Done()
+	log.Println("Message receiver from sequencer shutdown")
+	grpcServer.GracefulStop()
+	return fmt.Errorf("signal caught")
 }

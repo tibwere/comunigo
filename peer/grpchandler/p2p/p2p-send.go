@@ -50,13 +50,11 @@ func (h *P2PHandler) ConnectToPeers(ctx context.Context) error {
 	}
 
 	errMsg := ""
-	for i := range h.peerStatus.OtherMembers {
-		if len(errMsg) != 0 {
-			errMsg = fmt.Sprintf("%v, %v->%v", errMsg, i, <-errCh)
-		} else {
-			errMsg = fmt.Sprintf("%v->%v", i, <-errCh)
-		}
+	for _, m := range h.peerStatus.OtherMembers {
+		errMsg += fmt.Sprintf("Handler for: %v->%v, ", m.Username, <-errCh)
 	}
+	// rimuove l'ulitmo ", "
+	errMsg = errMsg[:len(errMsg)-2]
 
 	return fmt.Errorf(errMsg)
 }

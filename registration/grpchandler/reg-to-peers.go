@@ -1,6 +1,7 @@
 package grpchandler
 
 import (
+	"context"
 	"fmt"
 	"log"
 	"net"
@@ -23,6 +24,14 @@ type RegistrationServer struct {
 	newMemberCh       chan *exchangeInformationFromUpdaterAndHandler
 	memberInformation []*exchangeInformationFromUpdaterAndHandler
 	numberOfClients   uint16
+}
+
+func NewRegistrationServer(size uint16) *RegistrationServer {
+	return &RegistrationServer{
+		newMemberCh:       make(chan *exchangeInformationFromUpdaterAndHandler),
+		memberInformation: []*exchangeInformationFromUpdaterAndHandler{},
+		numberOfClients:   size,
+	}
 }
 
 func (s *RegistrationServer) getChatGroupMembers() []*proto.PeerInfo {
@@ -54,14 +63,20 @@ func (s *RegistrationServer) isValidUsername(username string) bool {
 	return true
 }
 
-func (s *RegistrationServer) UpdateMembers(grpcServer *grpc.Server, seqAddr string, seqPort uint16, needSequencer bool) {
+func (s *RegistrationServer) UpdateMembers(ctx context.Context, grpcServer *grpc.Server, seqAddr string, seqPort uint16, needSequencer bool) error {
+	// stop del server al completamento del gruppo di multicast
+	defer grpcServer.GracefulStop()
 
 	for uint16(len(s.memberInformation)) < s.numberOfClients {
-		info := <-s.newMemberCh
-		if s.isValidUsername(info.clientInfo.GetUsername()) {
-			s.memberInformation = append(s.memberInformation, info)
-		} else {
-			info.isUsernameValidCh <- false
+		select {
+		case <-ctx.Done():
+			return fmt.Errorf("signal caught")
+		case info := <-s.newMemberCh:
+			if s.isValidUsername(info.clientInfo.GetUsername()) {
+				s.memberInformation = append(s.memberInformation, info)
+			} else {
+				info.isUsernameValidCh <- false
+			}
 		}
 	}
 
@@ -75,8 +90,7 @@ func (s *RegistrationServer) UpdateMembers(grpcServer *grpc.Server, seqAddr stri
 		ch <- true
 	}
 
-	// stop del server poiché è stato completato il gruppo di multicast
-	grpcServer.GracefulStop()
+	return nil
 }
 
 func (s *RegistrationServer) Sign(in *proto.NewUser, stream proto.Registration_SignServer) error {
@@ -113,15 +127,7 @@ func (s *RegistrationServer) Sign(in *proto.NewUser, stream proto.Registration_S
 	}
 }
 
-func NewRegistrationServer(size uint16) *RegistrationServer {
-	return &RegistrationServer{
-		newMemberCh:       make(chan *exchangeInformationFromUpdaterAndHandler),
-		memberInformation: []*exchangeInformationFromUpdaterAndHandler{},
-		numberOfClients:   size,
-	}
-}
-
-func ServeSignRequests(exposedPort uint16, regServer *RegistrationServer, grpcServer *grpc.Server) error {
+func ServeSignRequests(ctx context.Context, exposedPort uint16, regServer *RegistrationServer, grpcServer *grpc.Server) error {
 
 	lis, err := net.Listen("tcp", fmt.Sprintf(":%v", exposedPort))
 	if err != nil {
@@ -129,6 +135,10 @@ func ServeSignRequests(exposedPort uint16, regServer *RegistrationServer, grpcSe
 	}
 
 	proto.RegisterRegistrationServer(grpcServer, regServer)
-	grpcServer.Serve(lis)
-	return nil
+	go grpcServer.Serve(lis)
+
+	<-ctx.Done()
+	log.Println("Registration server shutdown")
+	grpcServer.GracefulStop()
+	return fmt.Errorf("signal caught")
 }
