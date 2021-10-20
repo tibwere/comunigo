@@ -1,61 +1,77 @@
 package scalar
 
 import (
+	"context"
+	"fmt"
 	"log"
 	"sort"
-	"sync"
 
+	"gitlab.com/tibwere/comunigo/peer"
 	"gitlab.com/tibwere/comunigo/proto"
 )
 
-type PendingMessages struct {
-	mu              *sync.Mutex
-	queue           []*proto.ScalarClockMessage
-	receivedAcks    map[string]int
-	presenceCounter map[string]int
-	otherFroms      []string
-}
+func (h *P2PScalarGRPCHandler) MessageQueueHandler(ctx context.Context) error {
+	for {
+		select {
+		case <-ctx.Done():
+			return fmt.Errorf("signal caught")
+		case newMessage := <-h.newMessageCh:
+			log.Printf("Insert [%v] into pendant queue\n", newMessage)
+			h.pendingMsg = append(h.pendingMsg, newMessage)
 
-func InitPendingMessagesList(allMembers []*proto.PeerInfo, currUser string) *PendingMessages {
-	pm := &PendingMessages{
-		mu:              &sync.Mutex{},
-		queue:           []*proto.ScalarClockMessage{},
-		receivedAcks:    map[string]int{},
-		presenceCounter: make(map[string]int),
-		otherFroms:      []string{},
-	}
+			sort.Slice(h.pendingMsg, func(i, j int) bool {
 
-	for _, m := range allMembers {
-		if m.Username != currUser {
-			pm.otherFroms = append(pm.otherFroms, m.Username)
-			pm.presenceCounter[m.Username] = 0
+				iClock := h.pendingMsg[i].Timestamp
+				jClock := h.pendingMsg[j].Timestamp
+				iFrom := h.pendingMsg[i].From
+				jFrom := h.pendingMsg[i].From
+
+				return iClock < jClock || (iClock == jClock && iFrom < jFrom)
+			})
+			h.presenceCounter[newMessage.From]++
+			h.syncDatastore()
+
+		case newAck := <-h.newAckCh:
+			h.receivedAcks[newAck.String()]++
+			h.syncDatastore()
 		}
 	}
-
-	return pm
 }
 
-func (pm *PendingMessages) Insert(newMessage *proto.ScalarClockMessage) {
-	pm.mu.Lock()
-	log.Printf("Insert [%v] into pendant queue\n", newMessage)
-	pm.queue = append(pm.queue, newMessage)
-	sort.Slice(pm.queue, func(i, j int) bool {
-
-		iClock := pm.queue[i].Timestamp
-		jClock := pm.queue[j].Timestamp
-		iFrom := pm.queue[i].From
-		jFrom := pm.queue[i].From
-
-		return iClock < jClock || (iClock == jClock && iFrom < jFrom)
-	})
-	pm.mu.Unlock()
-
-	pm.presenceCounter[newMessage.From]++
-
+func (h *P2PScalarGRPCHandler) syncDatastore() {
+	for _, mess := range h.deliverMessagesIfPossible() {
+		log.Printf("Delivered new message (Clock: %v - From: %v)\n", mess.GetTimestamp(), mess.GetFrom())
+		peer.InsertScalarClockMessage(h.peerStatus.Datastore, h.peerStatus.CurrentUsername, mess)
+	}
 }
 
-func (pm *PendingMessages) thereAreMessagesFromAllInQueue(actualFrom string) bool {
-	for from, presences := range pm.presenceCounter {
+func (h *P2PScalarGRPCHandler) deliverMessagesIfPossible() []*proto.ScalarClockMessage {
+	var deliverList []*proto.ScalarClockMessage
+
+	if len(h.pendingMsg) == 0 {
+		return deliverList
+	}
+
+	firstMsg := h.pendingMsg[0]
+	firstAck := &proto.ScalarClockAck{
+		Timestamp: firstMsg.Timestamp,
+		From:      firstMsg.From,
+	}
+	nMember := len(h.peerStatus.OtherMembers)
+
+	log.Printf("Received %v/%v acks for [%v]\n", h.receivedAcks[firstAck.String()], nMember, firstMsg)
+
+	if h.receivedAcks[firstAck.String()] == nMember && h.thereAreMessagesFromAllInQueue(firstMsg.From) {
+		deliverList = append(deliverList, firstMsg)
+		h.pendingMsg = h.pendingMsg[1:]
+		h.presenceCounter[firstAck.From]--
+	}
+
+	return deliverList
+}
+
+func (h *P2PScalarGRPCHandler) thereAreMessagesFromAllInQueue(actualFrom string) bool {
+	for from, presences := range h.presenceCounter {
 		if from != actualFrom && presences == 0 {
 			log.Printf("Member %v does not have messages in queue at this moment. Cannot deliver message\n", from)
 			return false
@@ -65,40 +81,4 @@ func (pm *PendingMessages) thereAreMessagesFromAllInQueue(actualFrom string) boo
 	log.Println("All other members has at least a message in queue at this moment.")
 
 	return true
-}
-
-func (pm *PendingMessages) CheckIfIsReadyToDelivered(currUser string) *proto.ScalarClockMessage {
-	var deliverMsg *proto.ScalarClockMessage
-	canDeliver := false
-
-	if len(pm.queue) == 0 {
-		return nil
-	}
-
-	pm.mu.Lock()
-	firstMsg := pm.queue[0]
-	firstAck := &proto.ScalarClockAck{
-		Timestamp: firstMsg.Timestamp,
-		From:      firstMsg.From,
-	}
-
-	log.Printf("Received %v/%v acks for [%v]\n", pm.receivedAcks[firstAck.String()], len(pm.otherFroms), firstMsg)
-
-	if pm.receivedAcks[firstAck.String()] == len(pm.otherFroms) && pm.thereAreMessagesFromAllInQueue(pm.queue[0].From) {
-		deliverMsg = pm.queue[0]
-		canDeliver = true
-		pm.queue = pm.queue[1:]
-		pm.presenceCounter[firstAck.From]--
-	}
-	pm.mu.Unlock()
-
-	if canDeliver {
-		return deliverMsg
-	} else {
-		return nil
-	}
-}
-
-func (pm *PendingMessages) IncrementAckCounter(ack *proto.ScalarClockAck) {
-	pm.receivedAcks[ack.String()]++
 }

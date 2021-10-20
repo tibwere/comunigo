@@ -11,11 +11,11 @@ import (
 )
 
 func (h *P2PScalarGRPCHandler) simulateRecv(new *proto.ScalarClockMessage) {
-	h.lockScalar.Lock()
-	h.scalarClock++
-	h.lockScalar.Unlock()
+	h.clockMu.Lock()
+	h.clock++
+	h.clockMu.Unlock()
 
-	h.pendingMsg.Insert(new)
+	h.newMessageCh <- new
 }
 
 func (h *P2PScalarGRPCHandler) MultiplexMessages(ctx context.Context) {
@@ -28,14 +28,14 @@ func (h *P2PScalarGRPCHandler) MultiplexMessages(ctx context.Context) {
 		case newMessageBody := <-h.peerStatus.FrontBackCh:
 
 			log.Printf("Received from frontend: %v\n", newMessageBody)
-			h.lockScalar.Lock()
-			h.scalarClock++
+			h.clockMu.Lock()
+			h.clock++
 			newMessage := &proto.ScalarClockMessage{
-				Timestamp: h.scalarClock,
+				Timestamp: h.clock,
 				From:      h.peerStatus.CurrentUsername,
 				Body:      newMessageBody,
 			}
-			h.lockScalar.Unlock()
+			h.clockMu.Unlock()
 			log.Printf("Created new message with scalar clock %v\n", newMessage.GetTimestamp())
 
 			for _, ch := range h.scalarMessagesChs {

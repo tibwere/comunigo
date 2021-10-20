@@ -11,27 +11,38 @@ type P2PScalarGRPCHandler struct {
 	proto.UnimplementedComunigoServer
 	comunicationPort  uint16
 	peerStatus        *peer.Status
-	lockScalar        sync.Mutex
-	scalarClock       uint64
+	clockMu           sync.Mutex
+	clock             uint64
 	scalarMessagesChs []chan *proto.ScalarClockMessage
 	scalarAcksChs     []chan *proto.ScalarClockAck
-	pendingMsg        *PendingMessages
+	newMessageCh      chan *proto.ScalarClockMessage
+	newAckCh          chan *proto.ScalarClockAck
+	pendingMsg        []*proto.ScalarClockMessage
+	presenceCounter   map[string]int
+	receivedAcks      map[string]int
 }
 
 func NewP2PScalarGRPCHandler(port uint16, status *peer.Status) *P2PScalarGRPCHandler {
 	h := &P2PScalarGRPCHandler{
-		comunicationPort:  port,
-		peerStatus:        status,
-		lockScalar:        sync.Mutex{},
-		scalarClock:       0,
-		scalarMessagesChs: []chan *proto.ScalarClockMessage{},
-		scalarAcksChs:     []chan *proto.ScalarClockAck{},
-		pendingMsg:        InitPendingMessagesList(status.OtherMembers, status.CurrentUsername),
+		UnimplementedComunigoServer: proto.UnimplementedComunigoServer{},
+		comunicationPort:            port,
+		peerStatus:                  status,
+		clockMu:                     sync.Mutex{},
+		clock:                       0,
+		scalarMessagesChs:           []chan *proto.ScalarClockMessage{},
+		scalarAcksChs:               []chan *proto.ScalarClockAck{},
+		newMessageCh:                make(chan *proto.ScalarClockMessage),
+		newAckCh:                    make(chan *proto.ScalarClockAck),
+		pendingMsg:                  []*proto.ScalarClockMessage{},
+		presenceCounter:             make(map[string]int),
+		receivedAcks:                make(map[string]int),
 	}
 
-	for i := 0; i < len(h.peerStatus.OtherMembers); i++ {
+	for _, m := range h.peerStatus.OtherMembers {
 		h.scalarMessagesChs = append(h.scalarMessagesChs, make(chan *proto.ScalarClockMessage))
 		h.scalarAcksChs = append(h.scalarAcksChs, make(chan *proto.ScalarClockAck))
+		h.presenceCounter[m.Username] = 0
 	}
+
 	return h
 }

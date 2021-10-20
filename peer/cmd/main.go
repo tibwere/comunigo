@@ -100,7 +100,7 @@ func scalarHandler(ctx context.Context, port uint16, status *peer.Status) {
 	p2pScalarH := scalar.NewP2PScalarGRPCHandler(port, status)
 	var wg sync.WaitGroup
 
-	wg.Add(3)
+	wg.Add(4)
 	go func() {
 		defer wg.Done()
 
@@ -121,6 +121,15 @@ func scalarHandler(ctx context.Context, port uint16, status *peer.Status) {
 	go func() {
 		defer wg.Done()
 		p2pScalarH.MultiplexMessages(ctx)
+	}()
+
+	go func() {
+		defer wg.Done()
+
+		err := p2pScalarH.MessageQueueHandler(ctx)
+		if err != nil {
+			log.Printf("Message queue handler failed (%v)", err)
+		}
 	}()
 
 	wg.Wait()
