@@ -6,6 +6,7 @@ import (
 	"log"
 
 	"github.com/go-redis/redis/v8"
+	"gitlab.com/tibwere/comunigo/proto"
 	"google.golang.org/protobuf/encoding/protojson"
 	"google.golang.org/protobuf/reflect/protoreflect"
 )
@@ -34,16 +35,64 @@ func RPUSHMessage(ds *redis.Client, key string, message protoreflect.ProtoMessag
 	}
 }
 
-func GetMessages(ds *redis.Client, key string) ([]string, error) {
-	var messages []string
+func getMessagesPrologue(ds *redis.Client, key string) ([]string, error) {
 	ctx := context.Background()
+	return ds.LRange(ctx, key, 0, -1).Result()
+}
 
-	messages, err := ds.LRange(ctx, key, 0, -1).Result()
+func GetMessagesSEQ(ds *redis.Client, key string) ([]*proto.SequencerMessage, error) {
+	messages := []*proto.SequencerMessage{}
+
+	rawMessages, err := getMessagesPrologue(ds, key)
 	if err != nil {
 		return messages, err
 	}
 
-	log.Printf("Found %v messages into redis to deliver to frontend (key: %v)\n", len(messages), key)
+	log.Printf("Found %v messages into redis to deliver to frontend (key: %v)\n", len(rawMessages), key)
+
+	for _, raw := range rawMessages {
+		mess := &proto.SequencerMessage{}
+		protojson.Unmarshal([]byte(raw), mess)
+		messages = append(messages, mess)
+	}
+
+	return messages, nil
+}
+
+func GetMessagesSC(ds *redis.Client, key string) ([]*proto.ScalarClockMessage, error) {
+	messages := []*proto.ScalarClockMessage{}
+
+	rawMessages, err := getMessagesPrologue(ds, key)
+	if err != nil {
+		return messages, err
+	}
+
+	log.Printf("Found %v messages into redis to deliver to frontend (key: %v)\n", len(rawMessages), key)
+
+	for _, raw := range rawMessages {
+		mess := &proto.ScalarClockMessage{}
+		protojson.Unmarshal([]byte(raw), mess)
+		messages = append(messages, mess)
+	}
+
+	return messages, nil
+}
+
+func GetMessagesVC(ds *redis.Client, key string) ([]*proto.VectorialClockMessage, error) {
+	messages := []*proto.VectorialClockMessage{}
+
+	rawMessages, err := getMessagesPrologue(ds, key)
+	if err != nil {
+		return messages, err
+	}
+
+	log.Printf("Found %v messages into redis to deliver to frontend (key: %v)\n", len(rawMessages), key)
+
+	for _, raw := range rawMessages {
+		mess := &proto.VectorialClockMessage{}
+		protojson.Unmarshal([]byte(raw), mess)
+		messages = append(messages, mess)
+	}
 
 	return messages, nil
 }

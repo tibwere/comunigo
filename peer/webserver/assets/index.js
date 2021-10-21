@@ -1,16 +1,18 @@
 $( document ).ready(function() {
     
     $.ajax({
-        type: "POST",
+        type: "GET",
         url: "info",
         success: function (response) {
-            result = $.parseJSON(response)
-            sessionStorage.setItem("currentUser", result.Username)
-            document.title = result.Username + " - comuniGO"
+            sessionStorage.setItem("currentUser", response.Username)
+            document.title = response.Username + " - comuniGO"
         
-            $("#me").text(result.Username)
-            $("#tos").text(result.Tos)
-            result.Members.forEach(m => $("#memberList").append('<li class="list-group-item list-group-item-warning"><strong class="text-primary">' + m + '</strong></li>'))          
+            $("#me").text(response.Username)
+            $("#tos").text(response.Tos)
+            response.OtherMembers.forEach(m => 
+                $("#memberList").append('<li class="list-group-item list-group-item-warning"><strong class="text-primary">' + 
+                    m.Username + '</strong> (addr: ' + m.Address + ')</li>')
+            )          
         }
     });
 });
@@ -27,8 +29,7 @@ $("#sendForm").submit(function (e) {
         data: {
             "message" : $("#message").val()
         },
-        success: function (response) {
-
+        success: function () {
             $("#message").val('')
             setTimeout(function(){
                 $("#sendBtn").empty();
@@ -41,26 +42,19 @@ $("#sendForm").submit(function (e) {
 $("#reloadMessagesForm").submit(function (e) { 
     e.preventDefault();
 
-    var messages = []
-
     $.ajax({
-        type: "POST",
+        type: "GET",
         url: "list",
         success: function (response) {
-            arrayOfJSONMessages = $.parseJSON(response)
-
-            if (arrayOfJSONMessages != null) {
-
-                $.each(arrayOfJSONMessages, function(_, elem) {
-                    messages.push($.parseJSON(elem))
-                })
-
+            if (response != null) {
                 $("#emptyMessageListAlert").fadeOut(200)
                 $("#messageList").empty()
 
-                $.each(messages, function(i, m) {
+                $.each(response, function(_, m) {
                     if (Array.isArray(m.Timestamp)) {
                         console.log("New! [ID: [" + m.Timestamp + "], From: " + m.From + ", Body: " + m.Body + "]")
+                    } else if (m.Timestamp === undefined) {
+                        console.log("New! [ID: 0, From: " + m.From + ", Body: " + m.Body + "]")
                     } else {
                         console.log("New! [ID: " + m.Timestamp + ", From: " + m.From + ", Body: " + m.Body + "]")
                     }

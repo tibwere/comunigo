@@ -2,7 +2,6 @@ package webserver
 
 import (
 	"context"
-	"encoding/json"
 	"fmt"
 	"log"
 	"net/http"
@@ -74,39 +73,30 @@ func (ws *WebServer) Startup(ctx context.Context, wg *sync.WaitGroup) {
 
 	e.Static(RouteRoot, "/assets")
 	e.GET(RouteRoot, ws.mainPageHandler)
-	e.POST(RouteList, ws.updateMessageList)
+	e.GET(RouteList, ws.updateMessageList)
 	e.POST(RouteSing, ws.signNewUserHandler)
 	e.POST(RouteSend, ws.sendMessageHandler)
-	e.POST(RouteInfo, ws.retrieveInfo)
+	e.GET(RouteInfo, ws.retrieveInfo)
 	e.Logger.Fatal(e.Start(fmt.Sprintf(":%v", ws.port)))
 }
 
-func sendJSONString(c echo.Context, data interface{}) error {
-	jsondata, err := json.Marshal(data)
-	if err != nil {
-		return c.NoContent(http.StatusInternalServerError)
-	} else {
-		return c.JSON(http.StatusOK, string(jsondata))
-	}
-}
+// func (ws *WebServer) getListOfOtherUsername() []string {
+// 	var usernames []string
+// 	for _, member := range ws.peerStatus.OtherMembers {
+// 		usernames = append(usernames, member.GetUsername())
+// 	}
 
-func (ws *WebServer) getListOfOtherUsername() []string {
-	var usernames []string
-	for _, member := range ws.peerStatus.OtherMembers {
-		usernames = append(usernames, member.GetUsername())
-	}
-
-	return usernames
-}
+// 	return usernames
+// }
 
 func (ws *WebServer) retrieveInfo(c echo.Context) error {
 	if ws.peerStatus.CurrentUsername == "" {
 		return c.NoContent(http.StatusForbidden)
 	} else {
-		return sendJSONString(c, map[string]interface{}{
-			"Tos":      ws.tos,
-			"Username": ws.peerStatus.CurrentUsername,
-			"Members":  ws.getListOfOtherUsername(),
+		return c.JSON(http.StatusOK, map[string]interface{}{
+			"Tos":          ws.tos,
+			"Username":     ws.peerStatus.CurrentUsername,
+			"OtherMembers": ws.peerStatus.OtherMembers,
 		})
 	}
 }
@@ -116,12 +106,31 @@ func (ws *WebServer) updateMessageList(c echo.Context) error {
 	if ws.peerStatus.CurrentUsername == "" {
 		return c.NoContent(http.StatusForbidden)
 	} else {
-		messages, err := peer.GetMessages(ws.peerStatus.Datastore, ws.peerStatus.CurrentUsername)
-		if err != nil {
+		switch ws.tos {
+		case "sequencer":
+			messages, err := peer.GetMessagesSEQ(ws.peerStatus.Datastore, ws.peerStatus.CurrentUsername)
+			if err != nil {
+				return c.NoContent(http.StatusInternalServerError)
+			} else {
+				return c.JSON(http.StatusOK, messages)
+			}
+		case "scalar":
+			messages, err := peer.GetMessagesSC(ws.peerStatus.Datastore, ws.peerStatus.CurrentUsername)
+			if err != nil {
+				return c.NoContent(http.StatusInternalServerError)
+			} else {
+				return c.JSON(http.StatusOK, messages)
+			}
+		case "vectorial":
+			messages, err := peer.GetMessagesVC(ws.peerStatus.Datastore, ws.peerStatus.CurrentUsername)
+			if err != nil {
+				return c.NoContent(http.StatusInternalServerError)
+			} else {
+				return c.JSON(http.StatusOK, messages)
+			}
+		default:
 			return c.NoContent(http.StatusInternalServerError)
 		}
-
-		return sendJSONString(c, messages)
 	}
 }
 
@@ -139,11 +148,11 @@ func (ws *WebServer) signNewUserHandler(c echo.Context) error {
 
 		result := <-ws.peerStatus.FrontBackCh
 		if result == "SUCCESS" {
-			return sendJSONString(c, map[string]interface{}{
+			return c.JSON(http.StatusOK, map[string]interface{}{
 				"Status": result,
 			})
 		} else {
-			return sendJSONString(c, map[string]interface{}{
+			return c.JSON(http.StatusOK, map[string]interface{}{
 				"Status":  "ERROR",
 				"Message": "Username already in use, please retry with another one!",
 			})

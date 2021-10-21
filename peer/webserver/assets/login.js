@@ -13,10 +13,8 @@ $("#signform").submit(function (e) {
             "username" : $("#username").val()
         },
         success: function (response) {
-            console.log(response)
-            result = $.parseJSON(response)
-            if (result.Status == "ERROR") {
-                $("#errorMsg").html(result.Message)
+            if (response.Status == "ERROR") {
+                $("#errorMsg").html(response.Message)
                 $("#errorMsg").fadeIn()
 
                 $("#signBtn").empty()
