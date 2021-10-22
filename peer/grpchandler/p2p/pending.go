@@ -23,8 +23,8 @@ func (h *P2PHandler) messageQueueHandlerSC(ctx context.Context) error {
 			log.Printf("Insert [%v] into pendant queue\n", newMessage)
 			h.sData.PushIntoPendingList(newMessage)
 			h.sData.SyncDatastore(h.peerStatus.Datastore, h.peerStatus.CurrentUsername, h.peerStatus.OtherMembers)
-
 		case newAck := <-h.sData.GetAckCh():
+			log.Printf("Increment ack counter of [%v:%v]\n", newAck.From, newAck.Timestamp)
 			h.sData.IncrementAckCounter(newAck)
 			h.sData.SyncDatastore(h.peerStatus.Datastore, h.peerStatus.CurrentUsername, h.peerStatus.OtherMembers)
 		}

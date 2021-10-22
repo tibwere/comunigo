@@ -11,6 +11,9 @@ const (
 	P2P_SCALAR    P2PModality = 0
 	P2P_VECTORIAL P2PModality = 1
 )
+const (
+	BUFFSIZE_FOR_PEER = 20
+)
 
 type P2PHandler struct {
 	proto.UnimplementedComunigoServer

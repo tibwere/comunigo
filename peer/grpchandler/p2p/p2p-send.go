@@ -102,6 +102,7 @@ func (h *P2PHandler) sendLoopSC(ctx context.Context, c proto.ComunigoClient, ind
 
 		case newAck = <-h.sData.GetIncomingAckToBeSentCh(index):
 			peer.WaitBeforeSend()
+			log.Printf("Sending ack for [%v:%v] to %v@%v\n", newAck.From, newAck.Timestamp, h.peerStatus.OtherMembers[index].Username, h.peerStatus.OtherMembers[index].Address)
 			_, err := c.SendAckP2PScalar(context.Background(), newAck)
 			if err != nil {
 				return err

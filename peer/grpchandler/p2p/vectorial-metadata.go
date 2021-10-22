@@ -20,16 +20,17 @@ type VectorialMetadata struct {
 }
 
 func InitVectorialMetadata(status *peer.Status, otherNum int) *VectorialMetadata {
+	size := BUFFSIZE_FOR_PEER * (len(status.OtherMembers) + 1)
 	h := &VectorialMetadata{
 		vectorialMessagesChs: []chan *proto.VectorialClockMessage{},
 		clock:                []uint64{},
 		clockMu:              sync.Mutex{},
 		pendingMsg:           []*proto.VectorialClockMessage{},
-		receivedCh:           make(chan *proto.VectorialClockMessage, 4*(len(status.OtherMembers)+1)),
+		receivedCh:           make(chan *proto.VectorialClockMessage, size),
 	}
 
 	for i := 0; i < otherNum; i++ {
-		h.vectorialMessagesChs = append(h.vectorialMessagesChs, make(chan *proto.VectorialClockMessage))
+		h.vectorialMessagesChs = append(h.vectorialMessagesChs, make(chan *proto.VectorialClockMessage, size))
 		h.clock = append(h.clock, 0)
 	}
 

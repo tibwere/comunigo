@@ -23,21 +23,22 @@ type ScalarMetadata struct {
 }
 
 func InitScalarMetadata(members []*proto.PeerInfo) *ScalarMetadata {
+	size := len(members) * BUFFSIZE_FOR_PEER
 	h := &ScalarMetadata{
 		clockMu:           sync.Mutex{},
 		clock:             0,
 		scalarMessagesChs: []chan *proto.ScalarClockMessage{},
 		scalarAcksChs:     []chan *proto.ScalarClockAck{},
-		newMessageCh:      make(chan *proto.ScalarClockMessage),
-		newAckCh:          make(chan *proto.ScalarClockAck),
+		newMessageCh:      make(chan *proto.ScalarClockMessage, size),
+		newAckCh:          make(chan *proto.ScalarClockAck, size),
 		pendingMsg:        []*proto.ScalarClockMessage{},
 		presenceCounter:   make(map[string]int),
 		receivedAcks:      make(map[string]int),
 	}
 
 	for _, m := range members {
-		h.scalarMessagesChs = append(h.scalarMessagesChs, make(chan *proto.ScalarClockMessage))
-		h.scalarAcksChs = append(h.scalarAcksChs, make(chan *proto.ScalarClockAck))
+		h.scalarMessagesChs = append(h.scalarMessagesChs, make(chan *proto.ScalarClockMessage, size))
+		h.scalarAcksChs = append(h.scalarAcksChs, make(chan *proto.ScalarClockAck, size))
 		h.presenceCounter[m.Username] = 0
 	}
 
@@ -135,7 +136,7 @@ func (m *ScalarMetadata) PushIntoPendingList(mess *proto.ScalarClockMessage) {
 		iClock := m.pendingMsg[i].Timestamp
 		jClock := m.pendingMsg[j].Timestamp
 		iFrom := m.pendingMsg[i].From
-		jFrom := m.pendingMsg[i].From
+		jFrom := m.pendingMsg[j].From
 
 		return iClock < jClock || (iClock == jClock && iFrom < jFrom)
 	})
@@ -193,5 +194,4 @@ func (m *ScalarMetadata) thereAreMessagesFromAllInQueue(actualFrom string) bool 
 
 func (m *ScalarMetadata) IncrementAckCounter(ack *proto.ScalarClockAck) {
 	m.receivedAcks[ack.String()]++
-
 }

@@ -1,88 +1,96 @@
 package integrationtests
 
 import (
+	"context"
 	"fmt"
 	"os"
 	"strconv"
 	"strings"
+
+	"golang.org/x/sync/errgroup"
 )
 
-type TestConfiguration struct {
-	NumberOfUsers int
-	Ports         []uint16
+const (
+	N_MESSAGES_FOR_PEER = 5
+)
+
+func Registration() ([]*User, error) {
+	users := []*User{}
+
+	ports, err := getPorts()
+	if err != nil {
+		return users, err
+	}
+
+	users = generateUsers(ports)
+
+	eg, _ := errgroup.WithContext(context.Background())
+	for _, u := range users {
+		currUser := u
+		eg.Go(func() error {
+			return currUser.Sign()
+		})
+	}
+
+	err = eg.Wait()
+	return users, err
 }
 
-func GetConfiguration() (*TestConfiguration, error) {
+func SendMessages(users []*User, parallel bool) error {
+	if parallel {
+		eg, _ := errgroup.WithContext(context.Background())
 
-	tc := &TestConfiguration{
-		NumberOfUsers: 0,
-		Ports:         []uint16{},
+		for i := 0; i < N_MESSAGES_FOR_PEER; i++ {
+			for _, u := range users {
+				currUser := u
+				eg.Go(func() error {
+					return currUser.SendMessage(fmt.Sprintf("Message from %v", currUser.Name))
+				})
+			}
+		}
+
+		return eg.Wait()
+	} else {
+		for i := 0; i < N_MESSAGES_FOR_PEER; i++ {
+			for _, u := range users {
+				if err := u.SendMessage(fmt.Sprintf("Message from %v", u.Name)); err != nil {
+					return err
+				}
+
+				//time.Sleep(5000 * time.Millisecond)
+			}
+		}
+		return nil
 	}
+}
+
+func getPorts() ([]uint16, error) {
+	ports := []uint16{}
 
 	portsStr, ok := os.LookupEnv("COMUNIGO_TEST_PORTS")
 	if !ok {
-		return tc, fmt.Errorf("no ports found")
+		return ports, fmt.Errorf("no ports found")
 	} else {
 		for _, pStr := range strings.Split(portsStr, ",") {
 			p, err := strconv.ParseUint(pStr, 10, 16)
 			if err != nil {
-				return tc, fmt.Errorf("unable to parse %v", pStr)
+				return ports, fmt.Errorf("unable to parse %v", pStr)
 			}
 
-			tc.Ports = append(tc.Ports, uint16(p))
+			ports = append(ports, uint16(p))
 		}
 	}
 
-	tc.NumberOfUsers = len(tc.Ports)
-
-	return tc, nil
+	return ports, nil
 }
 
-func RegistrationHandler() ([]*User, error) {
-	users := []*User{}
-
-	tc, err := GetConfiguration()
-	if err != nil {
-		return users, err
+func generateUsers(ports []uint16) []*User {
+	var generated []*User
+	for i := range ports {
+		generated = append(generated, &User{
+			Name: fmt.Sprintf("test-%v", i),
+			Port: ports[i],
+		})
 	}
-
-	users = GenerateUsers(tc.NumberOfUsers, tc.Ports)
-
-	err = SignUsersParallel(users)
-	if err != nil {
-		return users, err
-	}
-
-	return users, nil
-}
-
-func CompareMessageListsSEQ(users []*User) (string, bool) {
-	mlRef, err := users[0].GetMessagesSEQ()
-	if err != nil {
-		return fmt.Sprintf("[USER %v] Unable to retrieve messages (%v)", users[0].Name, err), false
-	}
-	for _, u := range users[1:] {
-		mlActual, err := u.GetMessagesSEQ()
-		if err != nil {
-			return fmt.Sprintf("[USER %v] Unable to retrieve messages (%v)", u.Name, err), false
-		}
-
-		for i := range mlActual {
-			refTimestamp := mlRef[i].Timestamp
-			actualTimestamp := mlActual[i].Timestamp
-
-			refFrom := mlRef[i].From
-			actualFrom := mlActual[i].From
-
-			refBody := mlRef[i].Body
-			actualBody := mlActual[i].Body
-
-			if refTimestamp != actualTimestamp || refFrom != actualFrom || refBody != actualBody {
-				return fmt.Sprintf("User %v's %v-th message is: %v - User %v's %v-th message instead is: %v MISMATCH",
-					users[0], i, mlRef[i], u, i, mlActual[i]), false
-			}
-		}
-	}
-
-	return "PASS", true
+	return generated
 }
