@@ -18,7 +18,7 @@ $("#signform").submit(function (e) {
                 $("#errorMsg").fadeIn()
 
                 $("#signBtn").empty()
-                $("#signBtn").append('<i class="fas fa-sign-in-alt"></i> Login')
+                $("#signBtn").append('<span class="text-primary"><i class="fas fa-sign-in-alt"></i> Login</span>')
                 $("#signBtn").prop("disabled", false);
 
                 setTimeout(function(){
