@@ -37,7 +37,7 @@ func main() {
 		log.Fatalf("Unable to setup log file (%v)\n", err)
 	}
 
-	ws := webserver.New(cfg.WebServerPort, cfg.ChatGroupSize, cfg.TypeOfService, status)
+	ws := webserver.New(cfg.WebServerPort, cfg.ChatGroupSize, cfg.TypeOfService, cfg.Verbose, status)
 
 	wg.Add(2)
 	go ws.Startup(ctx, &wg)
@@ -50,7 +50,7 @@ func main() {
 func internalLogic(ctx context.Context, cfg *utilities.PeerConfig, status *peer.Status, wg *sync.WaitGroup) {
 	defer wg.Done()
 
-	regH := reg.NewToRegisterGRPCHandler(cfg.RegHostname, cfg.RegPort, cfg.EnableVerbose, status)
+	regH := reg.NewToRegisterGRPCHandler(cfg.RegHostname, cfg.RegPort, status)
 	err := regH.SignToRegister(ctx)
 	if err != nil {
 		log.Printf("Unable to sign to register node (%v)\n", err)
@@ -59,7 +59,7 @@ func internalLogic(ctx context.Context, cfg *utilities.PeerConfig, status *peer.
 
 	switch cfg.TypeOfService {
 	case "sequencer":
-		sequencerHandler(ctx, cfg.SeqHostname, cfg.ChatPort, cfg.EnableVerbose, status)
+		sequencerHandler(ctx, cfg.SeqHostname, cfg.ChatPort, status)
 	case "scalar":
 		p2pHandler(ctx, cfg.ChatPort, status, p2p.P2P_SCALAR)
 	case "vectorial":
@@ -69,8 +69,8 @@ func internalLogic(ctx context.Context, cfg *utilities.PeerConfig, status *peer.
 	}
 }
 
-func sequencerHandler(ctx context.Context, addr string, port uint16, verbose bool, status *peer.Status) {
-	seqH := seq.NewToSequencerGRPCHandler(addr, port, verbose, status)
+func sequencerHandler(ctx context.Context, addr string, port uint16, status *peer.Status) {
+	seqH := seq.NewToSequencerGRPCHandler(addr, port, status)
 	var wg sync.WaitGroup
 
 	wg.Add(2)

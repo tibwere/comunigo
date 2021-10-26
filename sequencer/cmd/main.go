@@ -33,9 +33,7 @@ func main() {
 		os.Exit(0)
 	}
 
-	if cfg.EnableVerbose {
-		log.Printf("Start server on port %v\n", cfg.ChatPort)
-	}
+	log.Printf("Start server on port %v\n", cfg.ChatPort)
 
 	// Inizializzazione dei server
 	memberCh := make(chan *proto.PeerInfo, cfg.ChatGroupSize)

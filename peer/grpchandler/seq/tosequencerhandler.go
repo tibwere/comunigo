@@ -10,14 +10,12 @@ type ToSequencerGRPCHandler struct {
 	sequencerAddr    string
 	comunicationPort uint16
 	peerStatus       *peer.Status
-	verbose          bool
 }
 
-func NewToSequencerGRPCHandler(addr string, port uint16, verbose bool, status *peer.Status) *ToSequencerGRPCHandler {
+func NewToSequencerGRPCHandler(addr string, port uint16, status *peer.Status) *ToSequencerGRPCHandler {
 	return &ToSequencerGRPCHandler{
 		sequencerAddr:    addr,
 		comunicationPort: port,
 		peerStatus:       status,
-		verbose:          verbose,
 	}
 }

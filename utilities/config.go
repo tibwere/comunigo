@@ -27,7 +27,6 @@ var (
 type RegistrationServerConfig struct {
 	RegPort       uint16
 	ChatGroupSize uint16
-	EnableVerbose bool
 	SeqHostname   string
 	TypeOfService string
 }
@@ -36,7 +35,6 @@ type SequencerServerConfig struct {
 	ChatPort      uint16
 	RegPort       uint16
 	ChatGroupSize uint16
-	EnableVerbose bool
 	TypeOfService string
 }
 
@@ -48,7 +46,7 @@ type PeerConfig struct {
 	RegHostname   string
 	SeqHostname   string
 	RedisHostname string
-	EnableVerbose bool
+	Verbose       bool
 	TypeOfService string
 }
 
@@ -88,17 +86,6 @@ func SetupSequencer() (*SequencerServerConfig, error) {
 	}
 	c.ChatGroupSize = val
 
-	enable, isPresent := os.LookupEnv(EnvEnableVerbose)
-	if !isPresent {
-		c.EnableVerbose = false
-	} else {
-		if strings.ToLower(enable) == "true" {
-			c.EnableVerbose = true
-		} else {
-			c.EnableVerbose = false
-		}
-	}
-
 	tos, isPresent := os.LookupEnv(EnvTypeOfService)
 	if !isPresent {
 		return c, fmt.Errorf("%v [TOS]", ErrEnvNotFound)
@@ -123,17 +110,6 @@ func SetupRegistrationServer() (*RegistrationServerConfig, error) {
 		return c, err
 	}
 	c.ChatGroupSize = val
-
-	enable, isPresent := os.LookupEnv(EnvEnableVerbose)
-	if !isPresent {
-		c.EnableVerbose = false
-	} else {
-		if strings.ToLower(enable) == "true" {
-			c.EnableVerbose = true
-		} else {
-			c.EnableVerbose = false
-		}
-	}
 
 	rhost, isPresent := os.LookupEnv(EnvSeqHostname)
 	if !isPresent {
@@ -174,12 +150,12 @@ func SetupPeer() (*PeerConfig, error) {
 
 	enable, isPresent := os.LookupEnv(EnvEnableVerbose)
 	if !isPresent {
-		c.EnableVerbose = false
+		c.Verbose = false
 	} else {
 		if strings.ToLower(enable) == "true" {
-			c.EnableVerbose = true
+			c.Verbose = true
 		} else {
-			c.EnableVerbose = false
+			c.Verbose = false
 		}
 	}
 

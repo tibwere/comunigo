@@ -27,14 +27,16 @@ type WebServer struct {
 	chatGroupSize uint16
 	tos           string
 	peerStatus    *peer.Status
+	verbose       bool
 }
 
-func New(exposedPort uint16, size uint16, tos string, status *peer.Status) *WebServer {
+func New(exposedPort uint16, size uint16, tos string, verbose bool, status *peer.Status) *WebServer {
 	return &WebServer{
 		port:          exposedPort,
 		chatGroupSize: size,
 		tos:           tos,
 		peerStatus:    status,
+		verbose:       verbose,
 	}
 }
 
@@ -80,15 +82,6 @@ func (ws *WebServer) Startup(ctx context.Context, wg *sync.WaitGroup) {
 	e.Logger.Fatal(e.Start(fmt.Sprintf(":%v", ws.port)))
 }
 
-// func (ws *WebServer) getListOfOtherUsername() []string {
-// 	var usernames []string
-// 	for _, member := range ws.peerStatus.OtherMembers {
-// 		usernames = append(usernames, member.GetUsername())
-// 	}
-
-// 	return usernames
-// }
-
 func (ws *WebServer) retrieveInfo(c echo.Context) error {
 	if ws.peerStatus.CurrentUsername == "" {
 		return c.NoContent(http.StatusForbidden)
@@ -97,6 +90,7 @@ func (ws *WebServer) retrieveInfo(c echo.Context) error {
 			"Tos":          ws.tos,
 			"Username":     ws.peerStatus.CurrentUsername,
 			"OtherMembers": ws.peerStatus.OtherMembers,
+			"Verbose":      ws.verbose,
 		})
 	}
 }

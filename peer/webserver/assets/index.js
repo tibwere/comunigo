@@ -5,6 +5,8 @@ $( document ).ready(function() {
         url: "info",
         success: function (response) {
             sessionStorage.setItem("currentUser", response.Username)
+            sessionStorage.setItem("verbose", response.Verbose)
+
             document.title = response.Username + " - comuniGO"
         
             $("#me").text(response.Username)
@@ -12,7 +14,15 @@ $( document ).ready(function() {
             response.OtherMembers.forEach(m => 
                 $("#memberList").append('<li class="list-group-item list-group-item-warning"><strong class="text-primary">' + 
                     m.Username + '</strong> (addr: ' + m.Address + ')</li>')
-            )          
+            )  
+            
+            if (response.Verbose) {
+                console.log("*** VERBOSE ENABLED ***")
+                console.log("Current peer...................: " + response.Username)
+                console.log("Current type of service offered: " + response.Tos)
+                console.log("List of other peers connected..:")
+                response.OtherMembers.forEach(m=>console.log("\t" + m.Username + "@" + m.Address))
+            }
         }
     });
 });
@@ -42,6 +52,8 @@ $("#sendForm").submit(function (e) {
 $("#reloadMessagesForm").submit(function (e) { 
     e.preventDefault();
 
+    debug = sessionStorage.getItem("verbose")
+
     $.ajax({
         type: "GET",
         url: "list",
@@ -50,13 +62,18 @@ $("#reloadMessagesForm").submit(function (e) {
                 $("#emptyMessageListAlert").fadeOut(200)
                 $("#messageList").empty()
 
+                if (debug) {
+                    console.log("New message list retrieved from server:")
+                }
                 $.each(response, function(_, m) {
-                    if (Array.isArray(m.Timestamp)) {
-                        console.log("New! [ID: [" + m.Timestamp + "], From: " + m.From + ", Body: " + m.Body + "]")
-                    } else if (m.Timestamp === undefined) {
-                        console.log("New! [ID: 0, From: " + m.From + ", Body: " + m.Body + "]")
-                    } else {
-                        console.log("New! [ID: " + m.Timestamp + ", From: " + m.From + ", Body: " + m.Body + "]")
+                    if (debug) {
+                        if (Array.isArray(m.Timestamp)) {
+                            console.log("\t[ID: [" + m.Timestamp + "], From: " + m.From + ", Body: " + m.Body + "]")
+                        } else if (m.Timestamp === undefined) {
+                            console.log("\t[ID: 0, From: " + m.From + ", Body: " + m.Body + "]")
+                        } else {
+                            console.log("\t[ID: " + m.Timestamp + ", From: " + m.From + ", Body: " + m.Body + "]")
+                        }
                     }
 
                     if (m.From == sessionStorage.getItem("currentUser")) {

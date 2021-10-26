@@ -23,9 +23,7 @@ func main() {
 		log.Fatalf("Unable to load configurations (%v)\n", err)
 	}
 
-	if cfg.EnableVerbose {
-		log.Printf("Start server on port %v (Group size: %v)\n", cfg.RegPort, cfg.ChatGroupSize)
-	}
+	log.Printf("Start server on port %v (Group size: %v)\n", cfg.RegPort, cfg.ChatGroupSize)
 
 	regServer := grpchandler.NewRegistrationServer(cfg.ChatGroupSize)
 	grpcServer := grpc.NewServer()

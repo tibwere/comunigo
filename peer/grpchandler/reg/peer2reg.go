@@ -49,9 +49,7 @@ func (h *ToRegisterGRPCHandler) SignToRegister(ctx context.Context) error {
 	}
 	defer conn.Close()
 
-	if h.verbose {
-		log.Printf("Connection established to: %v:%v\n", h.registerAddr, h.registerPort)
-	}
+	log.Printf("Connection established to: %v:%v\n", h.registerAddr, h.registerPort)
 
 	c := proto.NewRegistrationClient(conn)
 
