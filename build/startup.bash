@@ -1,7 +1,13 @@
 #!/bin/bash
 
 usage() {
-    echo "Usage: ${0} -n <number-of-peers> -t sequencer | scalar [-v verbose -a attach]"
+    echo "Usage: ${0} [OPTIONS]"
+    echo "Options:"
+    echo -e "\tFLAG   VALUES                             DESCRIPTION                REQUIRED/OPTIONAL"
+    echo -e "\t-n     <number-of-peers>                  Number of peers to spawn   {REQUIRED}"
+    echo -e "\t-t     [sequencer | scalar | vectorial]   Algorithm to use           {REQUIRED}"
+    echo -e "\t-v                                        Verbose modality           {OPTIONAL, default disabled}"
+    echo -e "\t-a                                        Attach containers          {OPTIONAL, default false}"
 }
 
 SIZE=3

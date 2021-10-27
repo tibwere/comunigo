@@ -1,7 +1,11 @@
 #!/bin/bash
 
 usage() {
-    echo "[?] Usage: $0 [ peer | sequencer | registration ]+"
+    echo "Usage: $0 [OPTIONS]"
+    echo "Options"
+    echo -e "\tFLAG   VALUES"
+    echo -e "\t-t     [sequencer | scalar | vectorial]   Algorithm to test"
+    echo -e "\t-m     [single | multiple]                Test sending a single message or multiple simultaneously"
 }
 
 MOD=""

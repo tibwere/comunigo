@@ -6,7 +6,12 @@ cleanup() {
 }
 
 usage() {
-    echo "[?] Usage: $0 [ peer | sequencer | registration ]+"
+    echo "Usage: $0 [OPTIONS]"
+    echo "Options"
+    echo -e "\tFLAG    DESCRIPTION"
+    echo -e "\t-p      Build peer image"
+    echo -e "\t-r      Build registration service image"
+    echo -e "\t-s      Build sequencer image"
 }
 
 DF_FOLDER="./dockerfiles/"
