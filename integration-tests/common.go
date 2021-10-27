@@ -11,7 +11,9 @@ import (
 )
 
 const (
-	N_MESSAGES_FOR_PEER = 5
+	N_MESSAGES_FOR_PEER  = 5
+	START_DELAY_INTERVAL = 0
+	END_DELAY_INTERVAL   = 3
 )
 
 func Registration() ([]*User, error) {
@@ -36,7 +38,7 @@ func Registration() ([]*User, error) {
 	return users, err
 }
 
-func SendMessages(users []*User, parallel bool) error {
+func SendMessages(users []*User, parallel bool, start int, end int) error {
 	if parallel {
 		eg, _ := errgroup.WithContext(context.Background())
 
@@ -44,7 +46,7 @@ func SendMessages(users []*User, parallel bool) error {
 			for _, u := range users {
 				currUser := u
 				eg.Go(func() error {
-					return currUser.SendMessage(fmt.Sprintf("Message from %v", currUser.Name))
+					return currUser.SendMessage(fmt.Sprintf("Message from %v", currUser.Name), start, end)
 				})
 			}
 		}
@@ -53,11 +55,9 @@ func SendMessages(users []*User, parallel bool) error {
 	} else {
 		for i := 0; i < N_MESSAGES_FOR_PEER; i++ {
 			for _, u := range users {
-				if err := u.SendMessage(fmt.Sprintf("Message from %v", u.Name)); err != nil {
+				if err := u.SendMessage(fmt.Sprintf("Message from %v", u.Name), start, end); err != nil {
 					return err
 				}
-
-				//time.Sleep(5000 * time.Millisecond)
 			}
 		}
 		return nil

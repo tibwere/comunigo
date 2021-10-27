@@ -14,9 +14,10 @@ type User struct {
 	Port uint16
 }
 
-func (u *User) SendMessage(body string) error {
+func (u *User) SendMessage(body string, start int, end int) error {
 	params := url.Values{}
 	params.Set("message", body)
+	params.Set("delay", fmt.Sprintf("%v:%v", start, end))
 
 	response, err := http.PostForm(
 		fmt.Sprintf("http://localhost:%v/send", u.Port),
@@ -46,6 +47,20 @@ func (u *User) GetMessagesSEQ() ([]*proto.SequencerMessage, error) {
 
 func (u *User) GetMessagesSC() ([]*proto.ScalarClockMessage, error) {
 	res := []*proto.ScalarClockMessage{}
+
+	response, err := http.Get(fmt.Sprintf("http://localhost:%v/list", u.Port))
+	if err != nil {
+		return res, err
+	}
+	defer response.Body.Close()
+
+	d := json.NewDecoder(response.Body)
+	err = d.Decode(&res)
+	return res, err
+}
+
+func (u *User) GetMessagesVC() ([]*proto.VectorialClockMessage, error) {
+	res := []*proto.VectorialClockMessage{}
 
 	response, err := http.Get(fmt.Sprintf("http://localhost:%v/list", u.Port))
 	if err != nil {
