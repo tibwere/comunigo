@@ -1,1 +1,19 @@
+## GOLANG ##
+# Log directory
 logs/
+
+## LATEX ##
+# File di output
+*.pdf
+
+# File generati dalla compilazione
+*.aux
+*.log
+*.synctex.gz
+*.out
+*.toc
+*.lof
+*.lot
+*.lol
+*.fls
+*.fdb_latexmk
