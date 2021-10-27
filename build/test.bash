@@ -39,7 +39,7 @@ if [ "${MOD}" != "single" ] && [ "${MOD}" != "multiple" ]; then
     exit 1
 fi
 
-export COMUNIGO_TEST_PORTS=$(comunigo-peer-discovery -t)
+export COMUNIGO_TEST_PORTS=$(sh discover.sh -t)
 go test -v ../integration-tests/ -run Test${MOD^}Send${TOS^}
 
 
