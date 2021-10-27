@@ -4,8 +4,11 @@ import (
 	"context"
 	"fmt"
 	"log"
+	"math/rand"
 	"net/http"
 	"os"
+	"strconv"
+	"strings"
 	"sync"
 	"time"
 
@@ -161,7 +164,26 @@ func (ws *WebServer) sendMessageHandler(c echo.Context) error {
 	if ws.peerStatus.CurrentUsername == "" {
 		return c.NoContent(http.StatusForbidden)
 	} else {
+		if delayStr := c.FormValue("delay"); delayStr != "" {
+			waitBeforeSend(delayStr)
+		}
 		ws.peerStatus.FrontBackCh <- c.FormValue("message")
+
 		return c.NoContent(http.StatusOK)
+	}
+}
+
+func waitBeforeSend(delayStr string) {
+	delayBoundaries := strings.Split(delayStr, ":")
+	if len(delayBoundaries) != 2 {
+		return
+	}
+
+	startDelay, errStart := strconv.Atoi(delayBoundaries[0])
+	endDelay, errEnd := strconv.Atoi(delayBoundaries[1])
+	if errStart == nil && errEnd == nil {
+		delay := rand.Intn((endDelay*1000)-(startDelay*1000)+1) + (startDelay * 1000)
+		log.Printf("Delay extracted between %v and %v is %v, so waiting %v millisec before send ...", startDelay*1000, endDelay*1000, delay, delay)
+		time.Sleep(time.Duration(delay) * time.Millisecond)
 	}
 }

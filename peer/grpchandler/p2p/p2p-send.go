@@ -5,7 +5,6 @@ import (
 	"fmt"
 	"log"
 
-	"gitlab.com/tibwere/comunigo/peer"
 	"gitlab.com/tibwere/comunigo/proto"
 	"google.golang.org/grpc"
 )
@@ -93,7 +92,6 @@ func (h *P2PHandler) sendLoopSC(ctx context.Context, c proto.ComunigoClient, ind
 			return fmt.Errorf("signal caught")
 
 		case newMessage = <-h.sData.GetIncomingMsgToBeSentCh(index):
-			peer.WaitBeforeSend()
 			log.Printf("Sending [%v] to %v@%v\n", newMessage, h.peerStatus.OtherMembers[index].Username, h.peerStatus.OtherMembers[index].Address)
 			_, err := c.SendUpdateP2PScalar(context.Background(), newMessage)
 			if err != nil {
@@ -101,7 +99,6 @@ func (h *P2PHandler) sendLoopSC(ctx context.Context, c proto.ComunigoClient, ind
 			}
 
 		case newAck = <-h.sData.GetIncomingAckToBeSentCh(index):
-			peer.WaitBeforeSend()
 			log.Printf("Sending ack for [%v:%v] to %v@%v\n", newAck.From, newAck.Timestamp, h.peerStatus.OtherMembers[index].Username, h.peerStatus.OtherMembers[index].Address)
 			_, err := c.SendAckP2PScalar(context.Background(), newAck)
 			if err != nil {
@@ -118,7 +115,6 @@ func (h *P2PHandler) sendLoopVC(ctx context.Context, c proto.ComunigoClient, ind
 			log.Printf("Message sender %v shutdown\n", index)
 			return fmt.Errorf("signal caught")
 		case newMessage := <-h.vData.GetIncomingMsgToBeSentCh(index):
-			peer.WaitBeforeSend()
 			log.Printf("Sending [%v] to %v@%v\n", newMessage, h.peerStatus.OtherMembers[index].Username, h.peerStatus.OtherMembers[index].Address)
 			_, err := c.SendUpdateP2PVectorial(context.Background(), newMessage)
 			if err != nil {
