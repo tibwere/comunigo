@@ -17,12 +17,12 @@ So, thanks to the [builder script](build/builder.bash) it is possible to discrim
 - You can use `-r` flag to build **registration service** image
 - You can use `-s` flag to build **sequencer** image
 
-as you can see running `builder.bash -h`
+as you can see running `bash builder.bash -h`
 
 ## Installation and configuration
-Before building and running the application, you can edit the [configuration file](build/comunigo.cfg) to specify some environment configuration settings.
+Before building and running the application, you can edit the [configuration file](build/comunigo.cfg) to specify some environmental configuration settings.
 
-After that you can use [startup script](build/startup.bash) to effectively startup p2p nodes and other components of the net.
+After that you can use [startup script](build/startup.bash) to effectively startup peers and other components of the net.
 
 As you can see running `bash startup -h` there are a few options that permits you to further configure your experience with comuniGO, for example:
 - You have to use `-n` flag to set the number of peers to spawn
