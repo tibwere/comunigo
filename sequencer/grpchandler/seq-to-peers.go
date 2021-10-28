@@ -19,10 +19,10 @@ func (s *SequencerServer) StartupConnectionWithPeers(ctx context.Context, fromRe
 		case <-ctx.Done():
 			return fmt.Errorf("signal caught")
 		case currentMember := <-s.memberCh:
-			s.connections[currentMember.Address] = make(chan *proto.SequencerMessage)
+			s.connections[currentMember.GetAddress()] = make(chan *proto.SequencerMessage)
 
 			go func() {
-				if err := s.sendBackMessages(ctx, currentMember.Address); err != nil {
+				if err := s.sendBackMessages(ctx, currentMember.GetAddress()); err != nil {
 					errCh <- err
 				}
 			}()
