@@ -5,8 +5,8 @@
 [ $# -eq 1 ] && [ "$1" != "-t" ] && echo "Usage: $0 [-t]" && exit 1
 
 if [ "$1" = "-t" ]; then
-    docker ps | grep comunigo/peer:latest | cut -d ":" -f 3 | cut -d "-" -f 1 | tr "\n" "," | sed "s/,$/\n/"
+    docker ps | grep comunigo/peer:latest | cut -d ":" -f 3 | cut -d "-" -f 1 | sort -u | tr "\n" "," | sed "s/,$/\n/"
 else
     echo "List of active peers:"
-    docker ps | grep comunigo/peer:latest | cut -d ":" -f 3 | cut -d "-" -f 1 | xargs -L1 -I {} -n 1 echo -e "\t- http://localhost:{}/"
+    docker ps | grep comunigo/peer:latest | cut -d ":" -f 3 | cut -d "-" -f 1 | sort -u | xargs -L1 -I {} -n 1 echo -e "\t- http://localhost:{}/"
 fi
