@@ -45,7 +45,7 @@ func New(exposedPort uint16, size uint16, tos string, verbose bool, status *peer
 
 func (ws *WebServer) initLogger(e *echo.Echo) {
 	logFile, err := os.OpenFile(
-		fmt.Sprintf("/logs/peer_%v_ws.log", ws.peerStatus.PublicIP),
+		fmt.Sprintf("/logs/peer_%v_ws.log", ws.peerStatus.GetExposedIP()),
 		os.O_APPEND|os.O_CREATE|os.O_WRONLY,
 		0666,
 	)
@@ -86,40 +86,39 @@ func (ws *WebServer) Startup(ctx context.Context, wg *sync.WaitGroup) {
 }
 
 func (ws *WebServer) retrieveInfo(c echo.Context) error {
-	if ws.peerStatus.CurrentUsername == "" {
+	if ws.peerStatus.NotYetSigned() {
 		return c.NoContent(http.StatusForbidden)
 	} else {
 		return c.JSON(http.StatusOK, map[string]interface{}{
 			"Tos":          ws.tos,
-			"Username":     ws.peerStatus.CurrentUsername,
-			"OtherMembers": ws.peerStatus.OtherMembers,
+			"Username":     ws.peerStatus.GetCurrentUsername(),
+			"OtherMembers": ws.peerStatus.GetOtherMembers(),
 			"Verbose":      ws.verbose,
 		})
 	}
 }
 
 func (ws *WebServer) updateMessageList(c echo.Context) error {
-
-	if ws.peerStatus.CurrentUsername == "" {
+	if ws.peerStatus.NotYetSigned() {
 		return c.NoContent(http.StatusForbidden)
 	} else {
 		switch ws.tos {
 		case "sequencer":
-			messages, err := peer.GetMessagesSEQ(ws.peerStatus.Datastore, ws.peerStatus.CurrentUsername)
+			messages, err := ws.peerStatus.GetMessagesSEQ()
 			if err != nil {
 				return c.NoContent(http.StatusInternalServerError)
 			} else {
 				return c.JSON(http.StatusOK, messages)
 			}
 		case "scalar":
-			messages, err := peer.GetMessagesSC(ws.peerStatus.Datastore, ws.peerStatus.CurrentUsername)
+			messages, err := ws.peerStatus.GetMessagesSC()
 			if err != nil {
 				return c.NoContent(http.StatusInternalServerError)
 			} else {
 				return c.JSON(http.StatusOK, messages)
 			}
 		case "vectorial":
-			messages, err := peer.GetMessagesVC(ws.peerStatus.Datastore, ws.peerStatus.CurrentUsername)
+			messages, err := ws.peerStatus.GetMessagesVC()
 			if err != nil {
 				return c.NoContent(http.StatusInternalServerError)
 			} else {
@@ -132,7 +131,7 @@ func (ws *WebServer) updateMessageList(c echo.Context) error {
 }
 
 func (ws *WebServer) mainPageHandler(c echo.Context) error {
-	if ws.peerStatus.CurrentUsername == "" {
+	if ws.peerStatus.NotYetSigned() {
 		return c.File("/assets/login.html")
 	} else {
 		return c.File("/assets/index.html")
@@ -140,10 +139,10 @@ func (ws *WebServer) mainPageHandler(c echo.Context) error {
 }
 
 func (ws *WebServer) signNewUserHandler(c echo.Context) error {
-	if ws.peerStatus.CurrentUsername == "" {
-		ws.peerStatus.FrontBackCh <- c.FormValue("username")
+	if ws.peerStatus.NotYetSigned() {
+		ws.peerStatus.PushIntoFrontendBackendChannel(c.FormValue("username"))
 
-		result := <-ws.peerStatus.FrontBackCh
+		result := <-ws.peerStatus.GetFromFrontendBackendChannel()
 		if result == "SUCCESS" {
 			return c.JSON(http.StatusOK, map[string]interface{}{
 				"Status": result,
@@ -161,14 +160,13 @@ func (ws *WebServer) signNewUserHandler(c echo.Context) error {
 }
 
 func (ws *WebServer) sendMessageHandler(c echo.Context) error {
-	if ws.peerStatus.CurrentUsername == "" {
+	if ws.peerStatus.NotYetSigned() {
 		return c.NoContent(http.StatusForbidden)
 	} else {
 		if delayStr := c.FormValue("delay"); delayStr != "" {
 			waitBeforeSend(delayStr)
 		}
-		ws.peerStatus.FrontBackCh <- c.FormValue("message")
-
+		ws.peerStatus.PushIntoFrontendBackendChannel(c.FormValue("message"))
 		return c.NoContent(http.StatusOK)
 	}
 }

@@ -5,7 +5,6 @@ import (
 	"sort"
 	"sync"
 
-	"github.com/go-redis/redis/v8"
 	"gitlab.com/tibwere/comunigo/peer"
 	"gitlab.com/tibwere/comunigo/proto"
 )
@@ -39,7 +38,7 @@ func InitScalarMetadata(members []*proto.PeerInfo) *ScalarMetadata {
 	for _, m := range members {
 		h.scalarMessagesChs = append(h.scalarMessagesChs, make(chan *proto.ScalarClockMessage, size))
 		h.scalarAcksChs = append(h.scalarAcksChs, make(chan *proto.ScalarClockAck, size))
-		h.presenceCounter[m.Username] = 0
+		h.presenceCounter[m.GetUsername()] = 0
 	}
 
 	return h
@@ -88,8 +87,8 @@ func (m *ScalarMetadata) SendToAll(mess *proto.ScalarClockMessage) {
 func (m *ScalarMetadata) UpdateClockAtRecv(in *proto.ScalarClockMessage) *proto.ScalarClockAck {
 	m.clockMu.Lock()
 	// L = max(t, L)
-	if m.clock < in.Timestamp {
-		m.clock = in.Timestamp
+	if m.clock < in.GetTimestamp() {
+		m.clock = in.GetTimestamp()
 	}
 
 	// L += 1
@@ -133,20 +132,20 @@ func (m *ScalarMetadata) PushIntoPendingList(mess *proto.ScalarClockMessage) {
 
 	sort.Slice(m.pendingMsg, func(i, j int) bool {
 
-		iClock := m.pendingMsg[i].Timestamp
-		jClock := m.pendingMsg[j].Timestamp
-		iFrom := m.pendingMsg[i].From
-		jFrom := m.pendingMsg[j].From
+		iClock := m.pendingMsg[i].GetTimestamp()
+		jClock := m.pendingMsg[j].GetTimestamp()
+		iFrom := m.pendingMsg[i].GetFrom()
+		jFrom := m.pendingMsg[j].GetFrom()
 
 		return iClock < jClock || (iClock == jClock && iFrom < jFrom)
 	})
-	m.presenceCounter[mess.From]++
+	m.presenceCounter[mess.GetFrom()]++
 }
 
-func (m *ScalarMetadata) SyncDatastore(ds *redis.Client, currUser string, others []*proto.PeerInfo) error {
-	for _, mess := range m.deliverMessagesIfPossible(others) {
+func (m *ScalarMetadata) SyncDatastore(status *peer.Status) error {
+	for _, mess := range m.deliverMessagesIfPossible(status.GetOtherMembers()) {
 		log.Printf("Delivered new message (Clock: %v - From: %v)\n", mess.GetTimestamp(), mess.GetFrom())
-		if err := peer.RPUSHMessage(ds, currUser, mess); err != nil {
+		if err := status.RPUSHMessage(mess); err != nil {
 			return err
 		}
 	}
@@ -163,17 +162,17 @@ func (m *ScalarMetadata) deliverMessagesIfPossible(others []*proto.PeerInfo) []*
 
 	firstMsg := m.pendingMsg[0]
 	firstAck := &proto.ScalarClockAck{
-		Timestamp: firstMsg.Timestamp,
-		From:      firstMsg.From,
+		Timestamp: firstMsg.GetTimestamp(),
+		From:      firstMsg.GetFrom(),
 	}
 	nMember := len(others)
 
 	log.Printf("Received %v/%v acks for [%v]\n", m.receivedAcks[firstAck.String()], nMember, firstMsg)
 
-	if m.receivedAcks[firstAck.String()] == nMember && m.thereAreMessagesFromAllInQueue(firstMsg.From) {
+	if m.receivedAcks[firstAck.String()] == nMember && m.thereAreMessagesFromAllInQueue(firstMsg.GetFrom()) {
 		deliverList = append(deliverList, firstMsg)
 		m.pendingMsg = m.pendingMsg[1:]
-		m.presenceCounter[firstAck.From]--
+		m.presenceCounter[firstAck.GetFrom()]--
 	}
 
 	return deliverList

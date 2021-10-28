@@ -7,14 +7,13 @@ import (
 	"net"
 
 	"github.com/golang/protobuf/ptypes/empty"
-	"gitlab.com/tibwere/comunigo/peer"
 	"gitlab.com/tibwere/comunigo/proto"
 	"google.golang.org/grpc"
 )
 
 func (s *ToSequencerGRPCHandler) SendFromSequencerToPeer(ctx context.Context, in *proto.SequencerMessage) (*empty.Empty, error) {
 	log.Printf("Received '%v' from %v (ID: %v)", in.GetBody(), in.GetFrom(), in.GetTimestamp())
-	peer.RPUSHMessage(s.peerStatus.Datastore, s.peerStatus.CurrentUsername, in)
+	s.peerStatus.RPUSHMessage(in)
 	return &empty.Empty{}, nil
 }
 

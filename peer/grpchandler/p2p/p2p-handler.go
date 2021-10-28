@@ -33,9 +33,9 @@ func NewP2PHandler(port uint16, status *peer.Status, modality P2PModality) *P2PH
 	}
 
 	if modality == P2P_SCALAR {
-		h.sData = InitScalarMetadata(status.OtherMembers)
+		h.sData = InitScalarMetadata(status.GetOtherMembers())
 	} else {
-		h.vData = InitVectorialMetadata(status, len(status.OtherMembers))
+		h.vData = InitVectorialMetadata(status.GetCurrentUsername(), status.GetOtherMembers())
 	}
 
 	return h

@@ -32,7 +32,7 @@ func main() {
 		log.Fatalf("Unable to initialize status (%v)\n", err)
 	}
 
-	err = utilities.InitLogger(fmt.Sprintf("peer_%v_main", status.PublicIP))
+	err = utilities.InitLogger(fmt.Sprintf("peer_%v_main", status.GetExposedIP()))
 	if err != nil {
 		log.Fatalf("Unable to setup log file (%v)\n", err)
 	}

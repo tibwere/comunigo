@@ -5,7 +5,6 @@ import (
 	"sort"
 	"sync"
 
-	"github.com/go-redis/redis/v8"
 	"gitlab.com/tibwere/comunigo/peer"
 	"gitlab.com/tibwere/comunigo/proto"
 )
@@ -19,8 +18,8 @@ type VectorialMetadata struct {
 	receivedCh           chan *proto.VectorialClockMessage
 }
 
-func InitVectorialMetadata(status *peer.Status, otherNum int) *VectorialMetadata {
-	size := BUFFSIZE_FOR_PEER * (len(status.OtherMembers) + 1)
+func InitVectorialMetadata(current string, others []*proto.PeerInfo) *VectorialMetadata {
+	size := BUFFSIZE_FOR_PEER * (len(others) + 1)
 	h := &VectorialMetadata{
 		vectorialMessagesChs: []chan *proto.VectorialClockMessage{},
 		clock:                []uint64{},
@@ -29,7 +28,7 @@ func InitVectorialMetadata(status *peer.Status, otherNum int) *VectorialMetadata
 		receivedCh:           make(chan *proto.VectorialClockMessage, size),
 	}
 
-	for i := 0; i < otherNum; i++ {
+	for i := 0; i < len(others); i++ {
 		h.vectorialMessagesChs = append(h.vectorialMessagesChs, make(chan *proto.VectorialClockMessage, size))
 		h.clock = append(h.clock, 0)
 	}
@@ -38,19 +37,19 @@ func InitVectorialMetadata(status *peer.Status, otherNum int) *VectorialMetadata
 	h.clock = append(h.clock, 0)
 
 	// Inizializzazione del clock
-	h.initializeClockEntries(status)
+	h.initializeClockEntries(current, others)
 
 	return h
 }
 
-func (m *VectorialMetadata) initializeClockEntries(s *peer.Status) {
+func (m *VectorialMetadata) initializeClockEntries(current string, others []*proto.PeerInfo) {
 	var memberUsernames []string
-	m.memberIndexs = make(map[string]int, len(s.OtherMembers)+1)
+	m.memberIndexs = make(map[string]int, len(others)+1)
 
-	for _, m := range s.OtherMembers {
-		memberUsernames = append(memberUsernames, m.Username)
+	for _, m := range others {
+		memberUsernames = append(memberUsernames, m.GetUsername())
 	}
-	memberUsernames = append(memberUsernames, s.CurrentUsername)
+	memberUsernames = append(memberUsernames, current)
 
 	sort.Strings(memberUsernames)
 	for i, name := range memberUsernames {
@@ -82,14 +81,10 @@ func (m *VectorialMetadata) incrementClockUnlocked(member string) {
 	log.Printf("Incremented V[%v] (entry related to %v). New vectorial clock: %v\n", index, member, m.clock)
 }
 
-func (m *VectorialMetadata) SendToAll(mess *proto.VectorialClockMessage, ds *redis.Client, currUser string) error {
+func (m *VectorialMetadata) SendToAll(mess *proto.VectorialClockMessage) {
 	for _, ch := range m.vectorialMessagesChs {
 		ch <- mess
 	}
-
-	// Questo messaggio può essere direttamente consegnato perché di sicuro
-	// rispetta la causalità
-	return peer.RPUSHMessage(ds, currUser, mess)
 }
 
 func (m *VectorialMetadata) GetIncomingMsgToBeSentCh(index int) <-chan *proto.VectorialClockMessage {
@@ -104,18 +99,23 @@ func (m *VectorialMetadata) PushIntoPendingList(mess *proto.VectorialClockMessag
 	m.pendingMsg = append(m.pendingMsg, mess)
 }
 
-func (m *VectorialMetadata) SyncDatastore(ds *redis.Client, currUser string) error {
+func (m *VectorialMetadata) SyncDatastore(status *peer.Status) error {
 	deliverables := m.tryToDeliverToDatastore()
 	log.Printf("%v new message can be delivered\n", len(deliverables))
 
 	for _, mess := range deliverables {
-		log.Printf("Delivering new message: Timestamp: %v, From: %v, Body: '%v'\n", mess.Timestamp, mess.From, mess.Body)
+		log.Printf(
+			"Delivering new message: Timestamp: %v, From: %v, Body: '%v'\n",
+			mess.GetTimestamp(),
+			mess.GetFrom(),
+			mess.GetBody(),
+		)
 
 		m.clockMu.Lock()
-		m.incrementClockUnlocked(mess.From)
+		m.incrementClockUnlocked(mess.GetFrom())
 		m.clockMu.Unlock()
 
-		if err := peer.RPUSHMessage(ds, currUser, mess); err != nil {
+		if err := status.RPUSHMessage(mess); err != nil {
 			return err
 		}
 	}
@@ -138,8 +138,8 @@ func (m *VectorialMetadata) tryToDeliverToDatastore() []*proto.VectorialClockMes
 
 func (m *VectorialMetadata) isDeliverable(mess *proto.VectorialClockMessage) bool {
 
-	fromIndex := m.memberIndexs[mess.From]
-	for i, messEntry := range mess.Timestamp {
+	fromIndex := m.memberIndexs[mess.GetFrom()]
+	for i, messEntry := range mess.GetTimestamp() {
 		localEntry := m.clock[i]
 		if i == fromIndex && messEntry != localEntry+1 {
 			return false

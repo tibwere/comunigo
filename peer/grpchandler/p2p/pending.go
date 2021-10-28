@@ -22,11 +22,11 @@ func (h *P2PHandler) messageQueueHandlerSC(ctx context.Context) error {
 		case newMessage := <-h.sData.GetMessageCh():
 			log.Printf("Insert [%v] into pendant queue\n", newMessage)
 			h.sData.PushIntoPendingList(newMessage)
-			h.sData.SyncDatastore(h.peerStatus.Datastore, h.peerStatus.CurrentUsername, h.peerStatus.OtherMembers)
+			h.sData.SyncDatastore(h.peerStatus)
 		case newAck := <-h.sData.GetAckCh():
-			log.Printf("Increment ack counter of [%v:%v]\n", newAck.From, newAck.Timestamp)
+			log.Printf("Increment ack counter of [%v:%v]\n", newAck.GetFrom(), newAck.GetTimestamp())
 			h.sData.IncrementAckCounter(newAck)
-			h.sData.SyncDatastore(h.peerStatus.Datastore, h.peerStatus.CurrentUsername, h.peerStatus.OtherMembers)
+			h.sData.SyncDatastore(h.peerStatus)
 		}
 	}
 }
@@ -39,7 +39,7 @@ func (h *P2PHandler) messageQueueHandlerVC(ctx context.Context) error {
 		case newMessage := <-h.vData.GetReceivedCh():
 			log.Printf("Insert [%v] into pendant queue\n", newMessage)
 			h.vData.PushIntoPendingList(newMessage)
-			if err := h.vData.SyncDatastore(h.peerStatus.Datastore, h.peerStatus.CurrentUsername); err != nil {
+			if err := h.vData.SyncDatastore(h.peerStatus); err != nil {
 				return err
 			}
 		}

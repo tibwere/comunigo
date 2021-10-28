@@ -23,7 +23,7 @@ func (h *ToRegisterGRPCHandler) getOtherMembers(currUser string, stream proto.Re
 		if err != nil {
 			errStatus, _ := status.FromError(err)
 			if codes.InvalidArgument == errStatus.Code() {
-				h.peerStatus.FrontBackCh <- errStatus.Message()
+				h.peerStatus.PushIntoFrontendBackendChannel(errStatus.Message())
 				return true, nil
 			} else {
 				return false, err
@@ -31,7 +31,7 @@ func (h *ToRegisterGRPCHandler) getOtherMembers(currUser string, stream proto.Re
 		}
 
 		if currUser != member.GetUsername() {
-			h.peerStatus.OtherMembers = append(h.peerStatus.OtherMembers, member)
+			h.peerStatus.InsertNewMember(member)
 		}
 	}
 }
@@ -59,7 +59,7 @@ func (h *ToRegisterGRPCHandler) SignToRegister(ctx context.Context) error {
 			log.Println("Registration client shutdown")
 			return fmt.Errorf("signal caught")
 
-		case currUser = <-h.peerStatus.FrontBackCh:
+		case currUser = <-h.peerStatus.GetFromFrontendBackendChannel():
 			stream, err := c.Sign(context.Background(), &proto.NewUser{
 				Username: currUser,
 			})
@@ -73,9 +73,8 @@ func (h *ToRegisterGRPCHandler) SignToRegister(ctx context.Context) error {
 			}
 
 			if !loopAgain {
-				h.peerStatus.CurrentUsername = currUser
-				h.peerStatus.FrontBackCh <- "SUCCESS"
-				return nil
+				h.peerStatus.PushIntoFrontendBackendChannel("SUCCESS")
+				return h.peerStatus.SetUsername(currUser)
 			}
 		}
 	}

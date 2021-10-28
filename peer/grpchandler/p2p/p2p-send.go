@@ -14,19 +14,24 @@ func (h *P2PHandler) MultiplexMessages(ctx context.Context) error {
 		select {
 		case <-ctx.Done():
 			return fmt.Errorf("signal caught")
-		case newMessageBody := <-h.peerStatus.FrontBackCh:
+		case newMessageBody := <-h.peerStatus.GetFromFrontendBackendChannel():
 			log.Printf("Received from frontend: %v\n", newMessageBody)
 
 			if h.modality == P2P_SCALAR {
-				newMessage := h.sData.GenerateNewMessage(h.peerStatus.CurrentUsername, newMessageBody)
+				newMessage := h.sData.GenerateNewMessage(h.peerStatus.GetCurrentUsername(), newMessageBody)
 				log.Printf("Created new message with scalar clock %v\n", newMessage.GetTimestamp())
 
 				h.sData.SendToAll(newMessage)
 			} else {
-				newMessage := h.vData.GenerateNewMessage(h.peerStatus.CurrentUsername, newMessageBody)
+				newMessage := h.vData.GenerateNewMessage(h.peerStatus.GetCurrentUsername(), newMessageBody)
 				log.Printf("Created new message with vectorial clock %v\n", newMessage.GetTimestamp())
 
-				if err := h.vData.SendToAll(newMessage, h.peerStatus.Datastore, h.peerStatus.CurrentUsername); err != nil {
+				h.vData.SendToAll(newMessage)
+
+				// Questo messaggio può essere direttamente consegnato perché di sicuro
+				// rispetta la causalità
+
+				if err := h.peerStatus.RPUSHMessage(newMessage); err != nil {
 					return err
 				}
 			}
@@ -38,7 +43,7 @@ func (h *P2PHandler) MultiplexMessages(ctx context.Context) error {
 func (h *P2PHandler) ConnectToPeers(ctx context.Context) error {
 	errCh := make(chan error)
 
-	for i := range h.peerStatus.OtherMembers {
+	for i := range h.peerStatus.GetOtherMembers() {
 		index := i
 		go func() {
 			err := h.sendToOther(ctx, index)
@@ -49,8 +54,8 @@ func (h *P2PHandler) ConnectToPeers(ctx context.Context) error {
 	}
 
 	errMsg := ""
-	for _, m := range h.peerStatus.OtherMembers {
-		errMsg += fmt.Sprintf("Handler for: %v->%v, ", m.Username, <-errCh)
+	for _, m := range h.peerStatus.GetOtherMembers() {
+		errMsg += fmt.Sprintf("Handler for: %v->%v, ", m.GetUsername(), <-errCh)
 	}
 	// rimuove l'ulitmo ", "
 	errMsg = errMsg[:len(errMsg)-2]
@@ -61,7 +66,7 @@ func (h *P2PHandler) ConnectToPeers(ctx context.Context) error {
 func (h *P2PHandler) sendToOther(ctx context.Context, index int) error {
 
 	conn, err := grpc.Dial(
-		fmt.Sprintf("%v:%v", h.peerStatus.OtherMembers[index].GetAddress(), h.comunicationPort),
+		fmt.Sprintf("%v:%v", h.peerStatus.GetSpecificMember(index).GetAddress(), h.comunicationPort),
 		grpc.WithInsecure(),
 		grpc.WithBlock(),
 	)
@@ -70,7 +75,11 @@ func (h *P2PHandler) sendToOther(ctx context.Context, index int) error {
 	}
 	defer conn.Close()
 
-	log.Printf("Succesfully linked to %v@%v\n", h.peerStatus.OtherMembers[index].GetUsername(), h.peerStatus.OtherMembers[index].GetAddress())
+	log.Printf(
+		"Succesfully linked to %v@%v\n",
+		h.peerStatus.GetSpecificMember(index).GetUsername(),
+		h.peerStatus.GetSpecificMember(index).GetAddress(),
+	)
 
 	c := proto.NewComunigoClient(conn)
 
@@ -92,14 +101,25 @@ func (h *P2PHandler) sendLoopSC(ctx context.Context, c proto.ComunigoClient, ind
 			return fmt.Errorf("signal caught")
 
 		case newMessage = <-h.sData.GetIncomingMsgToBeSentCh(index):
-			log.Printf("Sending [%v] to %v@%v\n", newMessage, h.peerStatus.OtherMembers[index].Username, h.peerStatus.OtherMembers[index].Address)
+			log.Printf(
+				"Sending [%v] to %v@%v\n",
+				newMessage,
+				h.peerStatus.GetSpecificMember(index).GetUsername(),
+				h.peerStatus.GetSpecificMember(index).GetAddress(),
+			)
 			_, err := c.SendUpdateP2PScalar(context.Background(), newMessage)
 			if err != nil {
 				return err
 			}
 
 		case newAck = <-h.sData.GetIncomingAckToBeSentCh(index):
-			log.Printf("Sending ack for [%v:%v] to %v@%v\n", newAck.From, newAck.Timestamp, h.peerStatus.OtherMembers[index].Username, h.peerStatus.OtherMembers[index].Address)
+			log.Printf(
+				"Sending ack for [%v:%v] to %v@%v\n",
+				newAck.GetFrom(),
+				newAck.GetTimestamp(),
+				h.peerStatus.GetSpecificMember(index).GetUsername(),
+				h.peerStatus.GetSpecificMember(index).GetAddress(),
+			)
 			_, err := c.SendAckP2PScalar(context.Background(), newAck)
 			if err != nil {
 				return err
@@ -115,7 +135,11 @@ func (h *P2PHandler) sendLoopVC(ctx context.Context, c proto.ComunigoClient, ind
 			log.Printf("Message sender %v shutdown\n", index)
 			return fmt.Errorf("signal caught")
 		case newMessage := <-h.vData.GetIncomingMsgToBeSentCh(index):
-			log.Printf("Sending [%v] to %v@%v\n", newMessage, h.peerStatus.OtherMembers[index].Username, h.peerStatus.OtherMembers[index].Address)
+			log.Printf(
+				"Sending [%v] to %v@%v\n",
+				newMessage, h.peerStatus.GetSpecificMember(index).GetUsername(),
+				h.peerStatus.GetSpecificMember(index).GetAddress(),
+			)
 			_, err := c.SendUpdateP2PVectorial(context.Background(), newMessage)
 			if err != nil {
 				return err

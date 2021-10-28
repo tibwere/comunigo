@@ -11,15 +11,15 @@ import (
 	"google.golang.org/protobuf/reflect/protoreflect"
 )
 
-func InitDatastore(addr string) *redis.Client {
-	return redis.NewClient(&redis.Options{
+func (s *Status) initDatastore(addr string) {
+	s.datastore = redis.NewClient(&redis.Options{
 		Addr:     fmt.Sprintf("%v:6379", addr),
 		Password: "",
 		DB:       0,
 	})
 }
 
-func RPUSHMessage(ds *redis.Client, key string, message protoreflect.ProtoMessage) error {
+func (s *Status) RPUSHMessage(message protoreflect.ProtoMessage) error {
 	enc := &protojson.MarshalOptions{
 		Multiline:       false,
 		EmitUnpopulated: true,
@@ -30,25 +30,29 @@ func RPUSHMessage(ds *redis.Client, key string, message protoreflect.ProtoMessag
 		return err
 	} else {
 		val := string(byteMessage)
-		log.Printf("RPush into redis at key %v val: %v\n", key, val)
-		return ds.RPush(context.Background(), key, val).Err()
+		log.Printf("RPush into redis at key %v val: %v\n", s.currentUsername, val)
+		return s.datastore.RPush(context.Background(), s.currentUsername, val).Err()
 	}
 }
 
-func getMessagesPrologue(ds *redis.Client, key string) ([]string, error) {
+func (s *Status) getMessagesPrologue() ([]string, error) {
 	ctx := context.Background()
-	return ds.LRange(ctx, key, 0, -1).Result()
+	return s.datastore.LRange(ctx, s.currentUsername, 0, -1).Result()
 }
 
-func GetMessagesSEQ(ds *redis.Client, key string) ([]*proto.SequencerMessage, error) {
+func (s *Status) GetMessagesSEQ() ([]*proto.SequencerMessage, error) {
 	messages := []*proto.SequencerMessage{}
 
-	rawMessages, err := getMessagesPrologue(ds, key)
+	rawMessages, err := s.getMessagesPrologue()
 	if err != nil {
 		return messages, err
 	}
 
-	log.Printf("Found %v messages into redis to deliver to frontend (key: %v)\n", len(rawMessages), key)
+	log.Printf(
+		"Found %v messages into redis to deliver to frontend (key: %v)\n",
+		len(rawMessages),
+		s.currentUsername,
+	)
 
 	for _, raw := range rawMessages {
 		mess := &proto.SequencerMessage{}
@@ -59,15 +63,19 @@ func GetMessagesSEQ(ds *redis.Client, key string) ([]*proto.SequencerMessage, er
 	return messages, nil
 }
 
-func GetMessagesSC(ds *redis.Client, key string) ([]*proto.ScalarClockMessage, error) {
+func (s *Status) GetMessagesSC() ([]*proto.ScalarClockMessage, error) {
 	messages := []*proto.ScalarClockMessage{}
 
-	rawMessages, err := getMessagesPrologue(ds, key)
+	rawMessages, err := s.getMessagesPrologue()
 	if err != nil {
 		return messages, err
 	}
 
-	log.Printf("Found %v messages into redis to deliver to frontend (key: %v)\n", len(rawMessages), key)
+	log.Printf(
+		"Found %v messages into redis to deliver to frontend (key: %v)\n",
+		len(rawMessages),
+		s.currentUsername,
+	)
 
 	for _, raw := range rawMessages {
 		mess := &proto.ScalarClockMessage{}
@@ -78,15 +86,19 @@ func GetMessagesSC(ds *redis.Client, key string) ([]*proto.ScalarClockMessage, e
 	return messages, nil
 }
 
-func GetMessagesVC(ds *redis.Client, key string) ([]*proto.VectorialClockMessage, error) {
+func (s *Status) GetMessagesVC() ([]*proto.VectorialClockMessage, error) {
 	messages := []*proto.VectorialClockMessage{}
 
-	rawMessages, err := getMessagesPrologue(ds, key)
+	rawMessages, err := s.getMessagesPrologue()
 	if err != nil {
 		return messages, err
 	}
 
-	log.Printf("Found %v messages into redis to deliver to frontend (key: %v)\n", len(rawMessages), key)
+	log.Printf(
+		"Found %v messages into redis to deliver to frontend (key: %v)\n",
+		len(rawMessages),
+		s.currentUsername,
+	)
 
 	for _, raw := range rawMessages {
 		mess := &proto.VectorialClockMessage{}

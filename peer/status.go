@@ -2,6 +2,7 @@ package peer
 
 import (
 	"errors"
+	"fmt"
 	"net"
 	"strings"
 
@@ -10,29 +11,72 @@ import (
 )
 
 type Status struct {
-	CurrentUsername string
-	OtherMembers    []*proto.PeerInfo
-	Datastore       *redis.Client
-	FrontBackCh     chan string
-	PublicIP        string
+	currentUsername string
+	otherMembers    []*proto.PeerInfo
+	datastore       *redis.Client
+	frontBackCh     chan string
+	exposedIP       string
 }
 
 func Init(redisAddr string) (*Status, error) {
-	ip, err := getPublicIPAddr()
+	ip, err := retrieveIP()
 	if err != nil {
 		return nil, err
 	} else {
-		return &Status{
-			CurrentUsername: "",
-			OtherMembers:    []*proto.PeerInfo{},
-			Datastore:       InitDatastore(redisAddr),
-			FrontBackCh:     make(chan string),
-			PublicIP:        ip,
-		}, nil
+		s := &Status{
+			currentUsername: "",
+			otherMembers:    []*proto.PeerInfo{},
+			frontBackCh:     make(chan string),
+			exposedIP:       ip,
+		}
+
+		s.initDatastore(redisAddr)
+		return s, nil
 	}
 }
 
-func getPublicIPAddr() (string, error) {
+func (s *Status) GetExposedIP() string {
+	return s.exposedIP
+}
+
+func (s *Status) GetOtherMembers() []*proto.PeerInfo {
+	return s.otherMembers
+}
+
+func (s *Status) GetSpecificMember(index int) *proto.PeerInfo {
+	return s.otherMembers[index]
+}
+
+func (s *Status) SetUsername(username string) error {
+	if s.currentUsername != "" {
+		return fmt.Errorf("unable to set twice username")
+	} else {
+		s.currentUsername = username
+		return nil
+	}
+}
+
+func (s *Status) GetCurrentUsername() string {
+	return s.currentUsername
+}
+
+func (s *Status) NotYetSigned() bool {
+	return s.currentUsername == ""
+}
+
+func (s *Status) GetFromFrontendBackendChannel() <-chan string {
+	return s.frontBackCh
+}
+
+func (s *Status) PushIntoFrontendBackendChannel(message string) {
+	s.frontBackCh <- message
+}
+
+func (s *Status) InsertNewMember(newMember *proto.PeerInfo) {
+	s.otherMembers = append(s.otherMembers, newMember)
+}
+
+func retrieveIP() (string, error) {
 	addrs, err := net.InterfaceAddrs()
 	if err != nil {
 		return "", err
