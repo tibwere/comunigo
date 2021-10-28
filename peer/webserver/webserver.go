@@ -1,3 +1,5 @@
+// Package per la gestione della comunicazione con il frontend
+// mediante il webserver go Echo
 package webserver
 
 import (
@@ -17,6 +19,7 @@ import (
 	"gitlab.com/tibwere/comunigo/peer"
 )
 
+// Route che possono essere servite dal webserver
 const (
 	RouteSing = "/sign"
 	RouteSend = "/send"
@@ -25,6 +28,7 @@ const (
 	RouteRoot = "/"
 )
 
+// In ottica OO, oggetto che rappresenta il webserver
 type WebServer struct {
 	port          uint16
 	chatGroupSize uint16
@@ -33,6 +37,7 @@ type WebServer struct {
 	verbose       bool
 }
 
+// "Costruttore" dell'oggetto WebServer
 func New(exposedPort uint16, size uint16, tos string, verbose bool, status *peer.Status) *WebServer {
 	return &WebServer{
 		port:          exposedPort,
@@ -43,6 +48,8 @@ func New(exposedPort uint16, size uint16, tos string, verbose bool, status *peer
 	}
 }
 
+// "Metodo della classe WebServer" che inizializza
+// l'attività di log su file
 func (ws *WebServer) initLogger(e *echo.Echo) {
 	logFile, err := os.OpenFile(
 		fmt.Sprintf("/logs/peer_%v_ws.log", ws.peerStatus.GetExposedIP()),
@@ -55,6 +62,8 @@ func (ws *WebServer) initLogger(e *echo.Echo) {
 	e.Logger.SetOutput(logFile)
 }
 
+// "Metodo della classe WebServer" responsabile di effettuare il setup
+// delle impostazioni di echo e di far partire il web server
 func (ws *WebServer) Startup(ctx context.Context, wg *sync.WaitGroup) {
 	defer wg.Done()
 
@@ -85,6 +94,7 @@ func (ws *WebServer) Startup(ctx context.Context, wg *sync.WaitGroup) {
 	e.Logger.Fatal(e.Start(fmt.Sprintf(":%v", ws.port)))
 }
 
+// "Metodo della classe WebServer" handler della route "/info"
 func (ws *WebServer) retrieveInfo(c echo.Context) error {
 	if ws.peerStatus.NotYetSigned() {
 		return c.NoContent(http.StatusForbidden)
@@ -98,6 +108,7 @@ func (ws *WebServer) retrieveInfo(c echo.Context) error {
 	}
 }
 
+// "Metodo della classe WebServer" handler della route "/list"
 func (ws *WebServer) updateMessageList(c echo.Context) error {
 	if ws.peerStatus.NotYetSigned() {
 		return c.NoContent(http.StatusForbidden)
@@ -130,6 +141,7 @@ func (ws *WebServer) updateMessageList(c echo.Context) error {
 	}
 }
 
+// "Metodo della classe WebServer" handler della route "/"
 func (ws *WebServer) mainPageHandler(c echo.Context) error {
 	if ws.peerStatus.NotYetSigned() {
 		return c.File("/assets/login.html")
@@ -138,6 +150,7 @@ func (ws *WebServer) mainPageHandler(c echo.Context) error {
 	}
 }
 
+// "Metodo della classe WebServer" handler della route "/sign"
 func (ws *WebServer) signNewUserHandler(c echo.Context) error {
 	if ws.peerStatus.NotYetSigned() {
 		ws.peerStatus.PushIntoFrontendBackendChannel(c.FormValue("username"))
@@ -159,6 +172,7 @@ func (ws *WebServer) signNewUserHandler(c echo.Context) error {
 	}
 }
 
+// "Metodo della classe WebServer" handler della route "/send"
 func (ws *WebServer) sendMessageHandler(c echo.Context) error {
 	if ws.peerStatus.NotYetSigned() {
 		return c.NoContent(http.StatusForbidden)
@@ -171,6 +185,9 @@ func (ws *WebServer) sendMessageHandler(c echo.Context) error {
 	}
 }
 
+// "Metodo della classe WebServer" che implementa la logica d'attesa
+// nel caso in cui oltre al parametro message venga passato dal frontend
+// il parametro delay nel formato "min:max" (tipicamente per motivi di test)
 func waitBeforeSend(delayStr string) {
 	delayBoundaries := strings.Split(delayStr, ":")
 	if len(delayBoundaries) != 2 {

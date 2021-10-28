@@ -8,6 +8,8 @@ import (
 	"google.golang.org/grpc"
 )
 
+// Funzione che inizializza il sequencer inviandogli la lista dei peer connessi
+// al gruppo di multicast tramite un'apposita procedura remota
 func InitializeSequencer(addr string, port uint16, members []*proto.PeerInfo) error {
 
 	conn, err := grpc.Dial(

@@ -1,3 +1,5 @@
+// Package entry point della logica relativa al nodo di
+// registrazione all'interno dell'applicazione comuniGO
 package main
 
 import (
@@ -9,6 +11,7 @@ import (
 	"google.golang.org/grpc"
 )
 
+// Launcher del nodo di registrazione
 func main() {
 	var wg sync.WaitGroup
 	ctx := utilities.GetContextForSigHandling()

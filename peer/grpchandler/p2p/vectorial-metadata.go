@@ -9,6 +9,8 @@ import (
 	"gitlab.com/tibwere/comunigo/proto"
 )
 
+// In ottica OO, oggetto che racchiude i metadati basici
+// per la comunicazione p2p basata su clock logici vettoriale
 type VectorialMetadata struct {
 	vectorialMessagesChs []chan *proto.VectorialClockMessage
 	clock                []uint64
@@ -18,8 +20,10 @@ type VectorialMetadata struct {
 	receivedCh           chan *proto.VectorialClockMessage
 }
 
+// "Costruttore" dell'oggetto VectorialMetadata
 func InitVectorialMetadata(current string, others []*proto.PeerInfo) *VectorialMetadata {
 	size := BUFFSIZE_FOR_PEER * (len(others) + 1)
+
 	h := &VectorialMetadata{
 		vectorialMessagesChs: []chan *proto.VectorialClockMessage{},
 		clock:                []uint64{},
@@ -33,16 +37,18 @@ func InitVectorialMetadata(current string, others []*proto.PeerInfo) *VectorialM
 		h.clock = append(h.clock, 0)
 	}
 
-	// Serve anche l'entry del processo corrente
+	// Inizializzazione dell'entry del processo corrente
 	h.clock = append(h.clock, 0)
 
-	// Inizializzazione del clock
-	h.initializeClockEntries(current, others)
+	h.mapClockEntriesToUsernames(current, others)
 
 	return h
 }
 
-func (m *VectorialMetadata) initializeClockEntries(current string, others []*proto.PeerInfo) {
+// "Metodo della classe VectorialMetadata" che permette di inizializzare la mappa della classe
+// adibita al mapping fra gli username dei peer connessi al gruppo di multicast
+// e le entry del clock logico vettoriale
+func (m *VectorialMetadata) mapClockEntriesToUsernames(current string, others []*proto.PeerInfo) {
 	var memberUsernames []string
 	m.memberIndexs = make(map[string]int, len(others)+1)
 
@@ -58,6 +64,8 @@ func (m *VectorialMetadata) initializeClockEntries(current string, others []*pro
 	}
 }
 
+// "Metodo della classe VectorialMetadata" che permette di costruire un nuovo messaggio a partire
+// dal "corpo" ricevuto dal frontend
 func (m *VectorialMetadata) GenerateNewMessage(from string, body string) *proto.VectorialClockMessage {
 	m.clockMu.Lock()
 	m.incrementClockUnlocked(from)
@@ -71,34 +79,50 @@ func (m *VectorialMetadata) GenerateNewMessage(from string, body string) *proto.
 	return newMessage
 }
 
+// "Metodo della classe VectorialMetadata" per inserire un nuovo messaggio all'interno della
+// coda che viene processata dalla goroutine ad-hoc
 func (m *VectorialMetadata) InsertNewMessage(mess *proto.VectorialClockMessage) {
 	m.receivedCh <- mess
 }
 
+// "Metodo della classe VectorialMetadata" per l'incremento del clock
+//
+// n.b. Questo metodo dev'essere invocato soltanto dopo aver preso un lock
 func (m *VectorialMetadata) incrementClockUnlocked(member string) {
 	index := m.memberIndexs[member]
 	m.clock[index]++
 	log.Printf("Incremented V[%v] (entry related to %v). New vectorial clock: %v\n", index, member, m.clock)
 }
 
+// "Metodo della classe VectorialMetadata" che permette di inoltrare
+// a tutti i peer un messaggio
 func (m *VectorialMetadata) SendToAll(mess *proto.VectorialClockMessage) {
 	for _, ch := range m.vectorialMessagesChs {
 		ch <- mess
 	}
 }
 
+// "Metodo della classe VectorialMetadata" che permette alla goroutine dedicata di prelevare
+// messaggi da un canale da inoltrare al peer a cui è connesso
 func (m *VectorialMetadata) GetIncomingMsgToBeSentCh(index int) <-chan *proto.VectorialClockMessage {
 	return m.vectorialMessagesChs[index]
 }
 
+// "Metodo della classe VectorialMetadata" che permette alla goroutine dedicata di prelevare
+// i messaggi ricevuti da inserire all'interno della lista dei pendenti
 func (m *VectorialMetadata) GetReceivedCh() <-chan *proto.VectorialClockMessage {
 	return m.receivedCh
 }
 
+// "Metodo della classe VectorialMetadata" che permette di inserire un messaggio all'interno della lista
+// dei messaggi pendenti
 func (m *VectorialMetadata) PushIntoPendingList(mess *proto.VectorialClockMessage) {
 	m.pendingMsg = append(m.pendingMsg, mess)
 }
 
+// "Metodo della classe VectorialMetadata" che permette di sincronizzare la lista in memory con
+// quella memorizzata nel datastore effettuando il delivery di tutti i messaggi effettivamente
+// consegnabili
 func (m *VectorialMetadata) SyncDatastore(status *peer.Status) error {
 	deliverables := m.tryToDeliverToDatastore()
 	log.Printf("%v new message can be delivered\n", len(deliverables))
@@ -123,6 +147,8 @@ func (m *VectorialMetadata) SyncDatastore(status *peer.Status) error {
 	return nil
 }
 
+// "Metodo della classe VectorialMetadata" che permette di estrarre la sottolista dei messaggi consegnabili
+// dalla lista dei messaggi pendenti
 func (m *VectorialMetadata) tryToDeliverToDatastore() []*proto.VectorialClockMessage {
 
 	var deliverables []*proto.VectorialClockMessage
@@ -136,6 +162,8 @@ func (m *VectorialMetadata) tryToDeliverToDatastore() []*proto.VectorialClockMes
 	return deliverables
 }
 
+// "Metodo della classe VectorialMetadata" che permette di verificare se un messaggio
+// è o meno consegnabile
 func (m *VectorialMetadata) isDeliverable(mess *proto.VectorialClockMessage) bool {
 
 	fromIndex := m.memberIndexs[mess.GetFrom()]

@@ -9,6 +9,8 @@ import (
 	"google.golang.org/grpc"
 )
 
+// "Metodo della classe P2PHandler" che permette di smistare i messaggi ricevuti
+// dal frontend verso le varie goroutine in precedenza spawnate per l'inoltro dei messaggi
 func (h *P2PHandler) MultiplexMessages(ctx context.Context) error {
 	for {
 		select {
@@ -30,7 +32,6 @@ func (h *P2PHandler) MultiplexMessages(ctx context.Context) error {
 
 				// Questo messaggio può essere direttamente consegnato perché di sicuro
 				// rispetta la causalità
-
 				if err := h.peerStatus.RPUSHMessage(newMessage); err != nil {
 					return err
 				}
@@ -40,6 +41,9 @@ func (h *P2PHandler) MultiplexMessages(ctx context.Context) error {
 	}
 }
 
+// "Metodo della classe P2PHandler" che non fa altro di spawnare
+// una goroutine per ciascun membro del gruppo di multicast
+// dedicata all'inoltro dei messaggi provenienti dal frontend
 func (h *P2PHandler) ConnectToPeers(ctx context.Context) error {
 	errCh := make(chan error)
 
@@ -63,6 +67,8 @@ func (h *P2PHandler) ConnectToPeers(ctx context.Context) error {
 	return fmt.Errorf(errMsg)
 }
 
+// Entrypoint delle goroutine dedicate all'inoltro dei messaggi ai peer
+// connessi al gruppo di multicast
 func (h *P2PHandler) sendToOther(ctx context.Context, index int) error {
 
 	conn, err := grpc.Dial(
@@ -90,6 +96,8 @@ func (h *P2PHandler) sendToOther(ctx context.Context, index int) error {
 	}
 }
 
+// "Metodo della classe P2PHandler" per l'invio dei messaggi agli altri peer nel caso in cui
+// la modalità scelta è 'scalar'
 func (h *P2PHandler) sendLoopSC(ctx context.Context, c proto.ComunigoClient, index int) error {
 	for {
 		var newMessage *proto.ScalarClockMessage
@@ -128,6 +136,8 @@ func (h *P2PHandler) sendLoopSC(ctx context.Context, c proto.ComunigoClient, ind
 	}
 }
 
+// "Metodo della classe P2PHandler" per l'invio dei messaggi agli altri peer nel caso in cui
+// la modalità scelta è 'vectorial'
 func (h *P2PHandler) sendLoopVC(ctx context.Context, c proto.ComunigoClient, index int) error {
 	for {
 		select {

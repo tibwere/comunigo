@@ -6,6 +6,8 @@ import (
 	"log"
 )
 
+// "Metodo della classe P2PHandler" wrapper che ha l'unico scopo di invocare gli effettivi
+// handler delle code pendenti a seconda della modalità scelta
 func (h *P2PHandler) MessageQueueHandler(ctx context.Context) error {
 	if h.modality == P2P_SCALAR {
 		return h.messageQueueHandlerSC(ctx)
@@ -14,6 +16,11 @@ func (h *P2PHandler) MessageQueueHandler(ctx context.Context) error {
 	}
 }
 
+// "Metodo della classe P2PHandler" per la gestione della coda dei messaggi
+// e degli ack da processare nel caso in cui la modalità scelta è 'scalar'
+//
+// n.b. utilizzare una procedura singola che riceve input dai canali permette
+// di gestire la sincronizzazione evitanto l'uso esplicito di lock
 func (h *P2PHandler) messageQueueHandlerSC(ctx context.Context) error {
 	for {
 		select {
@@ -31,6 +38,11 @@ func (h *P2PHandler) messageQueueHandlerSC(ctx context.Context) error {
 	}
 }
 
+// "Metodo della classe P2PHandler" per la gestione della coda dei messaggi
+// e degli ack da processare nel caso in cui la modalità scelta è 'vectorial'
+//
+// n.b. utilizzare una procedura singola che riceve input dai canali permette
+// di gestire la sincronizzazione evitanto l'uso esplicito di lock
 func (h *P2PHandler) messageQueueHandlerVC(ctx context.Context) error {
 	for {
 		select {

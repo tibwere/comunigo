@@ -12,21 +12,25 @@ import (
 	"google.golang.org/grpc/status"
 )
 
+// "Metodo della classe ToRegisterGRPCHandler" che permette di effettuare il retrieve
+// dei peer connessi a partire dallo stream gRPC della risposta del nodo di registrazione
+//
+// Restituisce inoltre true nel caso in cui l'username inserito è valido
 func (h *ToRegisterGRPCHandler) getOtherMembers(currUser string, stream proto.Registration_SignClient) (bool, error) {
 	for {
 		member, err := stream.Recv()
 
 		if err == io.EOF {
-			return false, nil
+			return true, nil
 		}
 
 		if err != nil {
 			errStatus, _ := status.FromError(err)
 			if codes.InvalidArgument == errStatus.Code() {
 				h.peerStatus.PushIntoFrontendBackendChannel(errStatus.Message())
-				return true, nil
+				return false, nil
 			} else {
-				return false, err
+				return true, err
 			}
 		}
 
@@ -36,6 +40,9 @@ func (h *ToRegisterGRPCHandler) getOtherMembers(currUser string, stream proto.Re
 	}
 }
 
+// "Metodo della classe ToRegisterGRPCHandler" che permette di invocare il servizio RPC
+// esposto dal nodo di registrazione per richiedere la registrazione utilizzando l'username
+// correntemente inserito dall'utente e ricevuto tramite canale
 func (h *ToRegisterGRPCHandler) SignToRegister(ctx context.Context) error {
 	var currUser string
 
@@ -67,12 +74,12 @@ func (h *ToRegisterGRPCHandler) SignToRegister(ctx context.Context) error {
 				return err
 			}
 
-			loopAgain, err := h.getOtherMembers(currUser, stream)
+			validUsername, err := h.getOtherMembers(currUser, stream)
 			if err != nil {
 				return err
 			}
 
-			if !loopAgain {
+			if validUsername {
 				h.peerStatus.PushIntoFrontendBackendChannel("SUCCESS")
 				return h.peerStatus.SetUsername(currUser)
 			}

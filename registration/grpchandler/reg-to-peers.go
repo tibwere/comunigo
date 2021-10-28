@@ -1,3 +1,6 @@
+// Package per la gestione della logica applicativa
+// basata sullo scambio dei messaggi gRPC tra nodo di
+// nodo di registrazione e peers/sequencer
 package grpchandler
 
 import (
@@ -14,11 +17,16 @@ import (
 	"google.golang.org/grpc/status"
 )
 
+// In ottica OO, oggetto che rappresenta l'informazione
+// scambiata fra le goroutine spawnate automaticamente dal
+// server gRPC per l'esecuzione della procedura remota
+// e della goroutine responsaibile della logica di registrazione
 type exchangeInformationFromUpdaterAndHandler struct {
 	clientInfo        *proto.PeerInfo
 	isUsernameValidCh chan bool
 }
 
+// In ottica OO, oggetto che rappresenta il server di registrazione
 type RegistrationServer struct {
 	proto.UnimplementedRegistrationServer
 	newMemberCh       chan *exchangeInformationFromUpdaterAndHandler
@@ -26,6 +34,7 @@ type RegistrationServer struct {
 	numberOfClients   uint16
 }
 
+// "Costruttore" dell'oggetto RegistrationServer
 func NewRegistrationServer(size uint16) *RegistrationServer {
 	return &RegistrationServer{
 		newMemberCh:       make(chan *exchangeInformationFromUpdaterAndHandler),
@@ -34,6 +43,9 @@ func NewRegistrationServer(size uint16) *RegistrationServer {
 	}
 }
 
+// "Metodo della classe RegistrationServer" che a partire da un'array
+// di elementi del tipo exchangeInformationFromUpdaterAndHandler restituisce
+// la lista di membri del gruppo di multicast che si sono appena registrati
 func (s *RegistrationServer) getChatGroupMembers() []*proto.PeerInfo {
 	var members []*proto.PeerInfo
 
@@ -44,6 +56,10 @@ func (s *RegistrationServer) getChatGroupMembers() []*proto.PeerInfo {
 	return members
 }
 
+// "Metodo della classe RegistrationServer" che a partire da un'array
+// di elementi del tipo exchangeInformationFromUpdaterAndHandler restituisce
+// la lista dei canali su cui le varie procedure remote stanno attendendo
+// per capire se poter consegnare la lista al chiamante oppure restituire un errore
 func (s *RegistrationServer) getValidityList() []chan bool {
 	var validityList []chan bool
 
@@ -54,6 +70,10 @@ func (s *RegistrationServer) getValidityList() []chan bool {
 	return validityList
 }
 
+// "Metodo della classe RegistrationServer" che permette di verificare se un dato username
+// inserito da un peer è valido o meno
+//
+// la regola di validità si basa sull'unicità dell'username all'interno della lista
 func (s *RegistrationServer) isValidUsername(username string) bool {
 	for _, member := range s.memberInformation {
 		if member.clientInfo.GetUsername() == username {
@@ -63,6 +83,17 @@ func (s *RegistrationServer) isValidUsername(username string) bool {
 	return true
 }
 
+// "Metodo della classe RegistrationServer" eseguito da una goroutine che:
+//
+// 1) Riceve dalle varie procedure remote le informazioni
+//
+// 2) Verifica la validità degli username richiesti
+//
+// 3) Inizializza il sequencer
+//
+// 4) Sblocca le procedure remote per far si che consegnino il risultato al chiamante
+//
+// 5) Stoppa il server di registrazione
 func (s *RegistrationServer) UpdateMembers(ctx context.Context, grpcServer *grpc.Server, seqAddr string, seqPort uint16, needSequencer bool) error {
 	// stop del server al completamento del gruppo di multicast
 	defer grpcServer.GracefulStop()
@@ -93,6 +124,7 @@ func (s *RegistrationServer) UpdateMembers(ctx context.Context, grpcServer *grpc
 	return nil
 }
 
+// "Metodo della classe RegistrationServer" per l'implementazione della RPC Sign server-side
 func (s *RegistrationServer) Sign(in *proto.NewUser, stream proto.Registration_SignServer) error {
 
 	p, _ := peer.FromContext(stream.Context())
@@ -127,6 +159,8 @@ func (s *RegistrationServer) Sign(in *proto.NewUser, stream proto.Registration_S
 	}
 }
 
+// "Metodo della classe P2PHandler" che inizializza il server gRPC per la ricezione
+// dei messaggi dai peer che vogliono registrarsi al gruppo di multicast
 func ServeSignRequests(ctx context.Context, exposedPort uint16, regServer *RegistrationServer, grpcServer *grpc.Server) error {
 
 	lis, err := net.Listen("tcp", fmt.Sprintf(":%v", exposedPort))

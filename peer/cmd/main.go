@@ -1,3 +1,5 @@
+// Package entry point della logica relativa al peer
+// all'interno dell'applicazione comuniGO
 package main
 
 import (
@@ -16,6 +18,7 @@ import (
 	"gitlab.com/tibwere/comunigo/utilities"
 )
 
+// Launcher del peer
 func main() {
 	var wg sync.WaitGroup
 	ctx := utilities.GetContextForSigHandling()
@@ -47,6 +50,8 @@ func main() {
 	log.Println("Peer is shutting down")
 }
 
+// Handler principale per la logica gRPC. Internamente chiama gli altri handkler
+// a seconda del tipo di servizio scelto
 func internalLogic(ctx context.Context, cfg *utilities.PeerConfig, status *peer.Status, wg *sync.WaitGroup) {
 	defer wg.Done()
 
@@ -69,6 +74,7 @@ func internalLogic(ctx context.Context, cfg *utilities.PeerConfig, status *peer.
 	}
 }
 
+// Handler gRPC nel caso in cui il tipo di servizio scelto è 'sequencer'
 func sequencerHandler(ctx context.Context, addr string, port uint16, status *peer.Status) {
 	seqH := seq.NewToSequencerGRPCHandler(addr, port, status)
 	var wg sync.WaitGroup
@@ -95,6 +101,7 @@ func sequencerHandler(ctx context.Context, addr string, port uint16, status *pee
 	wg.Wait()
 }
 
+// Handler gRPC nel caso in cui il tipo di servizio scelto è 'scalar' oppure 'vectorial'
 func p2pHandler(ctx context.Context, port uint16, status *peer.Status, modality p2p.P2PModality) {
 	hnd := p2p.NewP2PHandler(port, status, modality)
 	var wg sync.WaitGroup

@@ -9,6 +9,8 @@ import (
 	"google.golang.org/grpc"
 )
 
+// "Metodo della classe ToSequencerGRPCHandler" che permette l'invio
+// dei messaggi al sequencer
 func (h *ToSequencerGRPCHandler) SendMessagesToSequencer(ctx context.Context) error {
 	conn, err := grpc.Dial(
 		fmt.Sprintf("%v:%v", h.sequencerAddr, h.comunicationPort),
