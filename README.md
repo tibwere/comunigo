@@ -31,8 +31,18 @@ As you can see running `bash startup -h` there are a few options that permits yo
 - You can use `-a` flag to enable attach mode in `docker-compose up` 
 
 ## Testing
+To test appplication simply:
+1. Run the [startup script](build/startup.bash) as described above specifing which algorithm do you want to test
+2. Run the [testing script](build/test.bash) specifing:
+    - Using `-t` flag the type of service to test (`sequencer`, `scalar` or `vectorial`)
+    - Using `-m` flag the modality of the test (`single` or `multiple`)
+3. Finally, once collected results, you should shutdown components running `sh shutdown.sh`
 
 ## Usage
-Use examples liberally, and show the expected output if you can. It's helpful to have inline the smallest example of usage that you can demonstrate, while providing links to more sophisticated examples if they are too long to reasonably include in the README.
+To use application simply follow one of this approach:
+- Run [discovery script](build/discover.sh) to get links for peers' frontend
+- Clone this [repository](https://gitlab.com/tibwere/comunigo-peer-discovery) and follow instructions inside the README file
+
+Finally, you should shutdown components running `sh shutdown.sh`
 
 
