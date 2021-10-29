@@ -75,3 +75,16 @@ func setTOS(env string) TypeOfService {
 		return TOS_INVALID
 	}
 }
+
+func (t TypeOfService) ToString() string {
+	switch t {
+	case TOS_CS_SEQUENCER:
+		return "SEQUENCER"
+	case TOS_P2P_SCALAR:
+		return "SCALAR"
+	case TOS_P2P_VECTORIAL:
+		return "VECTORIAL"
+	default:
+		return "INVALID"
+	}
+}

@@ -101,7 +101,7 @@ func (ws *WebServer) retrieveInfo(c echo.Context) error {
 		return c.NoContent(http.StatusForbidden)
 	} else {
 		return c.JSON(http.StatusOK, map[string]interface{}{
-			"Tos":          ws.tos,
+			"Tos":          ws.tos.ToString(),
 			"Username":     ws.peerStatus.GetCurrentUsername(),
 			"OtherMembers": ws.peerStatus.GetOtherMembers(),
 			"Verbose":      ws.verbose,

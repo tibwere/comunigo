@@ -28,7 +28,7 @@ function sendSuccessHandler() {
     }, 1500) 
 }
 
-function listSuccessHandler() {
+function listSuccessHandler(response) {
     if (response != null) {
         $("#emptyMessageListAlert").fadeOut(200)
         $("#messageList").empty()
