@@ -17,6 +17,7 @@ import (
 	"github.com/labstack/echo/v4"
 	"github.com/labstack/echo/v4/middleware"
 	"gitlab.com/tibwere/comunigo/peer"
+	"gitlab.com/tibwere/comunigo/utilities"
 )
 
 // Route che possono essere servite dal webserver
@@ -32,13 +33,13 @@ const (
 type WebServer struct {
 	port          uint16
 	chatGroupSize uint16
-	tos           string
+	tos           utilities.TypeOfService
 	peerStatus    *peer.Status
 	verbose       bool
 }
 
 // "Costruttore" dell'oggetto WebServer
-func New(exposedPort uint16, size uint16, tos string, verbose bool, status *peer.Status) *WebServer {
+func New(exposedPort uint16, size uint16, tos utilities.TypeOfService, verbose bool, status *peer.Status) *WebServer {
 	return &WebServer{
 		port:          exposedPort,
 		chatGroupSize: size,
@@ -114,21 +115,21 @@ func (ws *WebServer) updateMessageList(c echo.Context) error {
 		return c.NoContent(http.StatusForbidden)
 	} else {
 		switch ws.tos {
-		case "sequencer":
+		case utilities.TOS_CS_SEQUENCER:
 			messages, err := ws.peerStatus.GetMessagesSEQ()
 			if err != nil {
 				return c.NoContent(http.StatusInternalServerError)
 			} else {
 				return c.JSON(http.StatusOK, messages)
 			}
-		case "scalar":
+		case utilities.TOS_P2P_SCALAR:
 			messages, err := ws.peerStatus.GetMessagesSC()
 			if err != nil {
 				return c.NoContent(http.StatusInternalServerError)
 			} else {
 				return c.JSON(http.StatusOK, messages)
 			}
-		case "vectorial":
+		case utilities.TOS_P2P_VECTORIAL:
 			messages, err := ws.peerStatus.GetMessagesVC()
 			if err != nil {
 				return c.NoContent(http.StatusInternalServerError)

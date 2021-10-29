@@ -6,6 +6,8 @@ import (
 	"os"
 )
 
+// Funzione che permette di inizializzare
+// l'attività di logging su file anziché su STDIN
 func InitLogger(name string) error {
 	logFile, err := os.OpenFile(
 		fmt.Sprintf("/logs/%v.log", name),

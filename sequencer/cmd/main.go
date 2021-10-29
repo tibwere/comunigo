@@ -1,3 +1,5 @@
+// Package entry point della logica relativa al sequencer
+// all'interno dell'applicazione comuniGO
 package main
 
 import (
@@ -11,62 +13,56 @@ import (
 	"google.golang.org/grpc"
 )
 
+// Launcher del nodo di registrazione
 func main() {
 	var wg sync.WaitGroup
 	ctx := utilities.GetContextForSigHandling()
 
-	// Inizializzazione dell'attività di logging su file dedicato
 	err := utilities.InitLogger("sequencer")
 	if err != nil {
 		log.Fatalf("Unable to setup log file (%v)\n", err)
 	}
 
-	// Retrieve delle impostazioni di configurazione dall'ambiente
-	cfg, err := utilities.SetupSequencer()
+	cfg, err := utilities.InitSequencerConfig()
 	if err != nil {
 		log.Fatalf("Unable to load configurations (%v)\n", err)
 	}
 
 	// Se la modalità non è sequencer, shutdown!
-	if cfg.TypeOfService != "sequencer" {
+	if cfg.GetTOS() != utilities.TOS_CS_SEQUENCER {
 		log.Printf("Chosen modality do not need sequencer, shutdown!")
 		os.Exit(0)
 	}
 
-	log.Printf("Start server on port %v\n", cfg.ChatPort)
+	log.Printf("Start server on port %v\n", cfg.GetToPeersPort())
 
 	// Inizializzazione dei server
-	memberCh := make(chan *proto.PeerInfo, cfg.ChatGroupSize)
-	seqH := grpchandler.NewSequencerServer(cfg.ChatPort, cfg.ChatGroupSize, memberCh)
+	memberCh := make(chan *proto.PeerInfo, cfg.GetMulticastGroupSize())
+	seqH := grpchandler.NewSequencerServer(cfg.GetToPeersPort(), cfg.GetMulticastGroupSize(), memberCh)
 	fromRegH := grpchandler.NewFromRegisterServer(memberCh)
 	fromRegToSeqGRPCserver := grpc.NewServer()
 
 	wg.Add(4)
 
-	// Retrieve dei peer dal register
 	go func() {
 		defer wg.Done()
-		if err := fromRegH.GetPeersFromRegister(ctx, cfg.RegPort, fromRegToSeqGRPCserver); err != nil {
+		if err := fromRegH.GetPeersFromRegister(ctx, cfg.GetToRegistryPort(), fromRegToSeqGRPCserver); err != nil {
 			log.Printf("Unable to retrieve peer list (%v)", err)
 		}
 	}()
-	// Metodo buffer che non fa altro che prendere da un canale
-	// degli indirizzi ed utilizzarli per aprire nuove connessioni
+
 	go func() {
 		if err := seqH.StartupConnectionWithPeers(ctx, fromRegToSeqGRPCserver); err != nil {
 			log.Printf("Unable to comunicate with peer anymore (%v)", err)
 		}
 	}()
 
-	// Routine per l'ordinamento sequenziale dei messaggi
 	go func() {
 		if err := seqH.OrderMessages(ctx); err != nil {
 			log.Printf("Unable to order message to be delivered (%v)", err)
 		}
 	}()
 
-	// GRPC server per servire i peers con messaggi provenienti
-	// dalla routine precedente
 	go func() {
 		if err := seqH.ServePeers(ctx); err != nil {
 			log.Printf("Unable to serve peers anymore (%v)", err)

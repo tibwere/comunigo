@@ -11,6 +11,8 @@ import (
 	"google.golang.org/grpc"
 )
 
+// "Metodo della classe SequencerServer" eseguito da una goroutine che permette di inizializzare le connessioni
+// ai peer e al termine di spengere il server gRPC per la ricezione dei peer dal nodo di registrazione
 func (s *SequencerServer) StartupConnectionWithPeers(ctx context.Context, fromRegToSeqGRPCserver *grpc.Server) error {
 	errCh := make(chan error)
 
@@ -45,6 +47,8 @@ func (s *SequencerServer) StartupConnectionWithPeers(ctx context.Context, fromRe
 
 }
 
+// "Metodo della classe SequencerServer" che permette l'invio
+// dei messaggi 'preparati' dalla goroutine ad-hoc all'i-esimo peer connesso
 func (s *SequencerServer) sendBackMessages(ctx context.Context, addr string) error {
 	conn, err := grpc.Dial(
 		fmt.Sprintf("%v:%v", addr, s.port),
@@ -68,16 +72,20 @@ func (s *SequencerServer) sendBackMessages(ctx context.Context, addr string) err
 				return err
 			}
 		}
-
 	}
 }
 
+// "Metodo della classe SequencerServer" per l'implementazione della RPC SendFromPeerToSequencer server-side
 func (s *SequencerServer) SendFromPeerToSequencer(ctx context.Context, in *proto.RawMessage) (*empty.Empty, error) {
 	log.Printf("Received '%v' from %v\n", in.GetBody(), in.GetFrom())
 	s.seqCh <- in
 	return &empty.Empty{}, nil
 }
 
+// "Metodo della classe SequencerServer" eseguito da una goroutine che riceve
+// i messaggi tramite un canale in cui le procedure remote li inseriscono
+// li ordina aggiungendo un timestamp e li inoltra alle procedure dedicate
+// all'invio
 func (s *SequencerServer) OrderMessages(ctx context.Context) error {
 	for {
 		select {
@@ -98,6 +106,8 @@ func (s *SequencerServer) OrderMessages(ctx context.Context) error {
 	}
 }
 
+// "Metodo della classe SequencerServer" che inizializza il server gRPC per la ricezione
+// dei messaggi dai peer partecipanti al gruppo di multicast
 func (s *SequencerServer) ServePeers(ctx context.Context) error {
 	lis, err := net.Listen("tcp", fmt.Sprintf(":%v", s.port))
 	if err != nil {

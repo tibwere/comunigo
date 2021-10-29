@@ -25,12 +25,12 @@ func main() {
 
 	rand.Seed(time.Now().UnixNano())
 
-	cfg, err := utilities.SetupPeer()
+	cfg, err := utilities.InitPeerConfig()
 	if err != nil {
 		log.Fatalf("Unable to load configurations (%v)\n", err)
 	}
 
-	status, err := peer.Init(cfg.RedisHostname)
+	status, err := peer.Init(cfg.GetRedisAddress())
 	if err != nil {
 		log.Fatalf("Unable to initialize status (%v)\n", err)
 	}
@@ -40,7 +40,13 @@ func main() {
 		log.Fatalf("Unable to setup log file (%v)\n", err)
 	}
 
-	ws := webserver.New(cfg.WebServerPort, cfg.ChatGroupSize, cfg.TypeOfService, cfg.Verbose, status)
+	ws := webserver.New(
+		cfg.GetWebServerPort(),
+		cfg.GetMulticastGroupSize(),
+		cfg.GetTOS(),
+		cfg.NeedVerbose(),
+		status,
+	)
 
 	wg.Add(2)
 	go ws.Startup(ctx, &wg)
@@ -55,20 +61,20 @@ func main() {
 func internalLogic(ctx context.Context, cfg *utilities.PeerConfig, status *peer.Status, wg *sync.WaitGroup) {
 	defer wg.Done()
 
-	regH := reg.NewToRegisterGRPCHandler(cfg.RegHostname, cfg.RegPort, status)
+	regH := reg.NewToRegisterGRPCHandler(cfg.GetRegistrationAddress(), cfg.GetRegistrationPort(), status)
 	err := regH.SignToRegister(ctx)
 	if err != nil {
 		log.Printf("Unable to sign to register node (%v)\n", err)
 		return
 	}
 
-	switch cfg.TypeOfService {
-	case "sequencer":
-		sequencerHandler(ctx, cfg.SeqHostname, cfg.ChatPort, status)
-	case "scalar":
-		p2pHandler(ctx, cfg.ChatPort, status, p2p.P2P_SCALAR)
-	case "vectorial":
-		p2pHandler(ctx, cfg.ChatPort, status, p2p.P2P_VECTORIAL)
+	switch cfg.GetTOS() {
+	case utilities.TOS_CS_SEQUENCER:
+		sequencerHandler(ctx, cfg.GetSequencerAddress(), cfg.GetChatPort(), status)
+	case utilities.TOS_P2P_SCALAR:
+		p2pHandler(ctx, cfg.GetChatPort(), status, p2p.P2P_SCALAR)
+	case utilities.TOS_P2P_VECTORIAL:
+		p2pHandler(ctx, cfg.GetChatPort(), status, p2p.P2P_VECTORIAL)
 	default:
 		log.Println("TOS not expected")
 	}

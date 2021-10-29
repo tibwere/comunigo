@@ -12,14 +12,17 @@ import (
 	"golang.org/x/sync/errgroup"
 )
 
+// Test d'integrazione per l'invio singolo (vectorial)
 func TestSingleSendVectorial(t *testing.T) {
 	sendVectorial(t, false)
 }
 
+// Test d'integrazione per l'invio multiplo (vectorial)
 func TestMultipleSendVectorial(t *testing.T) {
 	sendVectorial(t, true)
 }
 
+// Test sul funzionamento del multicast basato sull'uso del clock logico vettoriale
 func sendVectorial(t *testing.T, parallel bool) {
 	users, err := Registration()
 	if err != nil {
@@ -82,13 +85,17 @@ func sendVectorial(t *testing.T, parallel bool) {
 	}
 }
 
+// Funzione che permette di inviare, per conto di un determinato utente, un messaggio "standard"
+// ovvero contenente il nome del mittente
 func sendStandardMessage(u *User) error {
-	if err := u.SendMessage(u.Name, START_DELAY_INTERVAL, END_DELAY_INTERVAL); err != nil {
+	if err := u.SendMessage(u.GetName(), START_DELAY_INTERVAL, END_DELAY_INTERVAL); err != nil {
 		return fmt.Errorf("Unable to send messages (%v)", err)
 	}
 	return nil
 }
 
+// Funzione che permette di inviare, per conto di un determinato utente, un messaggio "riassuntivo"
+// ovvero contenente l'elenco dei messaggi visti separati da :
 func sendSummaryMessage(u *User) error {
 	ml, err := u.GetMessagesVC()
 	if err != nil {
@@ -103,6 +110,7 @@ func sendSummaryMessage(u *User) error {
 	return nil
 }
 
+// Funzione wrapper per la verifica della correttezza
 func verifyIfCorrect(u *User) error {
 	ml, err := u.GetMessagesVC()
 	if err != nil {
@@ -112,14 +120,15 @@ func verifyIfCorrect(u *User) error {
 	return checkCausalConsistency(ml)
 }
 
+// Funzione che costruisce il corpo del messaggio riassuntivo
 func summaryOfRetrievedMessages(ml []*proto.VectorialClockMessage) string {
 	newBody := ""
 
 	for _, mess := range ml {
 		// sono interessato unicamente ai messaggi prima dei riassunti
 		// perché su quelli voglio testare l'effettivo rispetto della causalità
-		if len(strings.Split(mess.Body, ":")) == 1 {
-			newBody += mess.Body + ":"
+		if len(strings.Split(mess.GetBody(), ":")) == 1 {
+			newBody += mess.GetBody() + ":"
 		}
 	}
 
@@ -132,11 +141,13 @@ func summaryOfRetrievedMessages(ml []*proto.VectorialClockMessage) string {
 	return newBody
 }
 
+// Funzione che verifica se la lista di messaggi ricevuta come parametro
+// rispetta l'ordinamento causale
 func checkCausalConsistency(ml []*proto.VectorialClockMessage) error {
 	before := []string{}
 
 	for _, mess := range ml {
-		parts := strings.Split(mess.Body, ":")
+		parts := strings.Split(mess.GetBody(), ":")
 		if len(parts) > 1 {
 			// Per la consistenza causale questi messaggi possono essere
 			// ricevuti in un ordine arbitrario dai vari peer, l'importante

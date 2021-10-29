@@ -21,28 +21,40 @@ func main() {
 		log.Fatalf("Unable to setup log file (%v)\n", err)
 	}
 
-	cfg, err := utilities.SetupRegistrationServer()
+	cfg, err := utilities.InitRegistrationServiceConfig()
 	if err != nil {
 		log.Fatalf("Unable to load configurations (%v)\n", err)
 	}
 
-	log.Printf("Start server on port %v (Group size: %v)\n", cfg.RegPort, cfg.ChatGroupSize)
+	log.Printf(
+		"Start server on port %v (Group size: %v)\n",
+		cfg.GetExposedPort(),
+		cfg.GetMulticastGroupSize(),
+	)
 
-	regServer := grpchandler.NewRegistrationServer(cfg.ChatGroupSize)
+	regServer := grpchandler.NewRegistrationServer(cfg.GetMulticastGroupSize())
 	grpcServer := grpc.NewServer()
 
 	wg.Add(2)
 
 	go func() {
 		defer wg.Done()
-		if err := regServer.UpdateMembers(ctx, grpcServer, cfg.SeqHostname, cfg.RegPort, cfg.TypeOfService == "sequencer"); err != nil {
+		err := regServer.UpdateMembers(
+			ctx,
+			grpcServer,
+			cfg.GetSequencerAddress(),
+			cfg.GetExposedPort(),
+			cfg.GetTOS() == utilities.TOS_CS_SEQUENCER,
+		)
+		if err != nil {
 			log.Printf("Unable to update members (%v)", err)
 		}
 	}()
 
 	go func() {
 		defer wg.Done()
-		if err := grpchandler.ServeSignRequests(ctx, cfg.RegPort, regServer, grpcServer); err != nil {
+		err := grpchandler.ServeSignRequests(ctx, cfg.GetExposedPort(), regServer, grpcServer)
+		if err != nil {
 			log.Printf("Unable to serve sign requests (%v)", err)
 		}
 	}()
