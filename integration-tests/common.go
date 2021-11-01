@@ -17,7 +17,7 @@ import (
 const (
 	N_MESSAGES_FOR_PEER  = 5
 	START_DELAY_INTERVAL = 0
-	END_DELAY_INTERVAL   = 3
+	END_DELAY_INTERVAL   = 5
 )
 
 // Funzione wrapper per la registrazione del gruppo di multicast
