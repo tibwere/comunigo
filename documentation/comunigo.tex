@@ -26,7 +26,7 @@ L'obiettivo di questo documento è quello di analizzare e descrivere la metodolo
 \end{abstract}
 
 \section{Introduzione}
-\textbf{comuniGO} è un'applicazione distribuita sviluppata principalmente in GO che permette ad un insieme di peer. connessi ad un gruppo di multicast. di comunicare utilizzando diversi algoritmi.
+\textbf{comuniGO} è un'applicazione distribuita, sviluppata principalmente in GO, che permette ad un insieme di peer. connessi ad un gruppo di multicast. di comunicare utilizzando diversi algoritmi.
 
 \begin{figure}[htbp]
 \centerline{\includegraphics[width=0.4\textwidth]{figs/home.png}}
@@ -38,7 +38,7 @@ L'applicazione soddisfa i requisiti richiesti dalla traccia, ovvero:
 \begin{itemize}
 \item prevede un servizio di registrazione per i peer che vogliono partecipare al gruppo di multicast, assumendo che la membership sia statica durante l'esecuzione;
 
-\item prevede il supporto dei seguenti algoritmi di multicast:
+\item prevede il supporto dei seguenti algoritmi:
 \begin{enumerate}
 \item multicast totalmente ordinato implementato in modo centralizzato tramite un \textsl{sequencer};
 
@@ -56,7 +56,7 @@ Inoltre, come richiesto dalla specifica, è stato testato il funzionamento degli
 \item molteplici processi contemporaneamente inviino un
 messaggio di multicast;
 \end{itemize}
-e per simulare condizioni di maggiore stress nel testing è stato incluso, come cconsigliato, un parametro \textit{delay} configurabile che permette di specificare un ritardo nell'invio generato in modo random in un intervallo predefinito.
+e per simulare condizioni di maggiore stress nel testing è stato incluso, come consigliato, un parametro \textit{delay} configurabile che permette di specificare un ritardo nell'invio generato in modo random in un intervallo predefinito.
 
 Per facilitare il debugging dell'applicazione, come suggerito dalla traccia,  stato implementato un flag di tipo \textit{verbose} che, se attivo, abilita la stampa di informazioni di logging con i dettagli dei messaggi inviati e ricevuti.
 
@@ -81,36 +81,34 @@ Per lo sviluppo del progetto si è fatto uso delle seguenti tecnologie:
 In figura \ref{fig:architecture} è riportata una schematizzazione dell'architettura adottata per lo sviluppo dell'applicazione, in cui è possibile notare come:
 \begin{itemize}
 \item peer, servizio di registrazione e sequencer siano ciascuno incapsulato all'interno di un container differente;
-\item ciascun peer sono associati due volumi, uno per permettere che l'attività di logging sia persistente l'altro per accedere agli assets web
+\item a ciascun peer sono associati due volumi, uno per permettere che l'attività di logging sia persistente e l'altro per accedere agli assets web
 
-\item ogni peer è interconnesso con un'istanza unica di Redis al fine di consegnare e prelevare i messaggi;
+\item ogni peer è connesso ad un'istanza unica di Redis al fine di consegnare e prelevare i messaggi;
 
 \item la logica applicativa è interamente realizzata sfruttando il meccanismo RPC per qualunque coppia di endpoint;
 
 \item l'utente finale può scambiare i propri messaggi con gli altri connessi al gruppo di multicast semplicemente utilizzando il proprio browser (o in alternativa sfruttando programmi come cURL). 
 \end{itemize}
 \section{Scelte progettuali}
-Di seguito è riportata una carrellata di scelte effettuate nello sviluppo della soluzione proposta:
+Di seguito è riportata una carrellata di scelte effettuate nello sviluppo della soluzione proposta.
 
 \subsection{Uso di un frontend web per l'interazione con i peer}
 Per permettere l'interazione con i peer è stato scelto di realizzare un webserver implementato in Go sfruttando la libreria \texttt{labstack/echo}.
 
 Le route servite sono di seguito analizzate brevemente:
 \begin{itemize}
-\item \texttt{[GET] /} permette di accedere al portale di comunicazione effettivo se si autorizzati
-\item \texttt{[GET] /list} permette di ottenere la lista dei messaggi ricevuti in formato json
-\item \texttt{[GET] /info} permette di effettuare il retrieve delle informazioni necessarie a popolare l'homepage del sito
-\item \texttt{[POST] /send} permette di inviare un messaggio, specificando come parametro:
+\item \texttt{[GET] /:} permette di accedere al portale di comunicazione effettivo, previa registrazione;
+\item \texttt{[GET] /list:} permette di ottenere la lista dei messaggi ricevuti in formato json;
+\item \texttt{[GET] /info:} permette di effettuare il retrieve delle informazioni necessarie a popolare l'homepage del sito;
+\item \texttt{[POST] /send:} permette di inviare un messaggio, specificando come parametro:
 \begin{itemize}
-\item \texttt{message}: il corpo del messaggio
-\item \texttt{delay}: l'intervallo entro cui estrarre il ritardo con cui inviare il messaggio nel formato \texttt{start:end} \textbf{da usare solo in fase di test}
+\item \texttt{message}: il corpo del messaggio,
+\item \texttt{delay}: l'intervallo entro cui estrarre il ritardo con cui inviare il messaggio nel formato \texttt{start:end} \textbf{da usare solo in fase di test};
 \end{itemize}
-\item \texttt{[POST] /sign} permette di inviare il proprio username al servizio di registrazione, specificandolo come parametro (\texttt{username})
+\item \texttt{[POST] /sign:} permette di inviare il proprio username al servizio di registrazione, specificandolo come parametro (\texttt{username}).
 \end{itemize}
 
-Le risorse statiche, ovvero i file \texttt{*.html} e \texttt{*.js} poiché non soggetti ad alcun processo di compilazione sono stati inseriti all'interno del filesystem del container come volume \textit{readonly} (\texttt{assets}).
-
-Questo ha come vantaggi:
+Le risorse statiche, ovvero i file \texttt{*.html} e \texttt{*.js}, poiché non soggetti ad alcun processo di compilazione, sono state inserite all'interno del filesystem del container come volume \textit{readonly} (\texttt{assets}). Ciò permette di:
 \begin{itemize}
 \item diminuire il footprint delle immagini docker prodotte
 \item evitare di avviare la build dell'immagine del peer a seguito del cambiamento di alcuni elementi puramente grafici dell'applicazione
@@ -121,7 +119,7 @@ Questo ha come vantaggi:
 
 La tipologia di volume adottato è \textit{bind} per cui l'engine di docker non fa altro che montare la directory del filesystem locale \texttt{\$COMUNIGO\_PATH/logs} su \texttt{/logs} all'interno del container.
 
-Per quanto riguarda l'attività di log svolta dal webserver il formato configurato per ciascuna riga del file è il seguente:
+Per quanto riguarda l'attività di log svolta dal webserver, il formato configurato per ciascuna riga del file è il seguente:
 
 \centerline{\scriptsize\texttt{[<time>]: method=<method>, uri=<uri>, status=<status>}}
 
@@ -136,7 +134,7 @@ La scelta è ricaduta su redis per diversi motivi:
 \begin{itemize}
 \item si integra in maniera ottimale con Go, infatti l'API mappa praticamente 1:1 con gli effettivi comandi nativi di Redis;
 \item essendo la membership statica non è previsto che i peer vengano spenti ed in seguito riaccesi per partecipare sempre allo stesso gruppo per cui la natura \textit{in-memory} di Redis non rappresenta un'ostacolo;
-\item le funzionalità \texttt{RPUSH} e \texttt{LRANGE} nativamente permettono di coprire il meccanismo di salvataggio e retrieve dei messaggi
+\item le funzionalità \texttt{RPUSH} e \texttt{LRANGE} nativamente permettono di coprire il meccanismo di salvataggio e recupero dei messaggi
 \end{itemize}
 
 \subsection{Altre scelte}
@@ -154,7 +152,7 @@ Tuttavia questo approccio ha reso possibile la stesura di un codice modulare, fa
 \item Nel codice si è fatto massivamente uso di go routines, per parallelizzare l'esecuzione avendo un guadagno sulle prestazioni, e di canali al fine di:
 \begin{itemize}
 \item Permettere lo scambio di informazioni fra le varie goroutines
-\item Sincronizzare le goroutines evitanto l'uso esplicito di lock
+\item Sincronizzare le goroutines limitando l'uso esplicito di lock
 \end{itemize}
 
 \item Per implementare un meccanismo di chiusura \textit{pulita} dell'applicazione è stato utilizzato il meccanismo nativo di go dei \textit{contesti con cancellazione} in combinazione con la cattura dei segnali di \texttt{SIGINT} e \texttt{SIGTERM} che, stando alla documentazione Docker, vengono invati da docker-compose nel momento in cui si richiede lo stop dei container
@@ -226,6 +224,23 @@ dove $L$ è il clock logico scalare locale del peer e $t$ quello contenuto nel m
 \end{enumerate}
 \end{itemize}
 
+Essendo questo algoritmo indubbiamente il più elaborato fra i tre, di seguito è riportata un analisi sintetica delle strutture dati utilizzate per renderlo quanto più possibile efficiente.
+\begin{itemize}
+\item Viene utilizzato uno slice nativo di Go per la memorizzazione dei messaggi pendenti, il che implica un costo $O(n)$ ad ogni nuovo inserimento, per via della necessità di mantenere l'ordinamento.
+
+\item Viene utilizzata una mappa stringa $\to$ intero per contare gli ack ricevuti per ciascun messaggio pendente affinché il costo dell'incremento sia $O(1)$.
+
+È opportuno osservare che mantenere il contatore degli ack come metadato presente all'interno di ogni entry della lista dei messaggi avrebbe causato un costo per l'aggioramento, nel caso peggiore, pari a $O(n)$ per via della ricerca sequenziale, dove $n$ è pari alla taglia della coda.
+
+\item Viene utilizzata una mappa stringa $\to$ intero per tener traccia del numero di pacchetti in coda presenti per ciascun peer connesso al gruppo di multicast.
+
+Questa soluzione permette di realizzare la condizione \textit{``per ogni altro membro sono presenti messaggi in coda"} con un costo $O(k)$, dove $k$ è pari al numero di peer connessi ($k-1$ accessi alla mappa ciascuno dei quali a costo $O(1)$).
+
+È opportuno osservare che nel caso in cui non fosse stata utilizzata questa struttura dati, il costo della verifica sarebbe stato pari a $O(n)$, dove $n$ è pari al numero di messaggi in coda.
+
+Ovviamente in scenari reali d'utilizzo $k << n$.
+\end{itemize}
+
 \subsection{Comunicazione basata su clock logici vettoriali}
 Nel caso in cui la modalità di comunicazione selezionata è quella basata sull'utilizzo del clock logico vettoriale, una volta completata la fase di registrazione, la comunicazione si basa sull'approccio di seguito descritto:
 \begin{itemize}
@@ -236,17 +251,17 @@ Nel caso in cui la modalità di comunicazione selezionata è quella basata sull'
 \begin{equation}
 V_i[i] = V_i[i] + 1
 \end{equation}
-\item lo inoltra sulle varie connessioni in precedenza aperte verso i restanti partecipanti al gruppo di multicast
-\item lo consegna direttamente poiché certamente rispetta la causalità
+\item inoltra il messaggio sulle varie connessioni in precedenza aperte verso i restanti partecipanti al gruppo di multicast
+\item consegna direttamente il messaggio poiché certamente rispetta la causalità
 \end{itemize}
 
-\item alla \textsl{ricezione di un messaggio} da parte del peer $j$-esimo:
+\item alla \textsl{ricezione di un messaggio} proveniente dal peer $i$-esimo da parte del peer $j$-esimo :
 \begin{enumerate}
 \item si inserisce il messaggio all'interno della coda dei messaggi pendenti;
 \item si consegnano tutti i messaggi per cui valgono le seguenti condizioni:
 \begin{itemize}
-\item $t[p] = V_j[p] + 1$
-\item $t[k] \leq V_j[k]$ per ogni $k\neq j$
+\item $t[i] = V_j[i] + 1$
+\item $t[k] \leq V_j[k]$ per ogni $k\neq i$
 \end{itemize}
 \end{enumerate}
 \end{itemize}
