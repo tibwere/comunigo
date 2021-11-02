@@ -9,15 +9,16 @@ import (
 	"os"
 	"strconv"
 	"strings"
+	"time"
 
 	"golang.org/x/sync/errgroup"
 )
 
 // Alcuni parametri fixed su cui si basano i test
 const (
-	N_MESSAGES_FOR_PEER  = 5
+	N_MESSAGES_FOR_PEER  = 3
 	START_DELAY_INTERVAL = 0
-	END_DELAY_INTERVAL   = 5
+	END_DELAY_INTERVAL   = 3
 )
 
 // Funzione wrapper per la registrazione del gruppo di multicast
@@ -65,6 +66,8 @@ func SendMessages(users []*User, parallel bool, start int, end int) error {
 				if err := u.SendMessage(fmt.Sprintf("Message from %v", u.GetName()), start, end); err != nil {
 					return err
 				}
+
+				time.Sleep(END_DELAY_INTERVAL * time.Second)
 			}
 		}
 		return nil
