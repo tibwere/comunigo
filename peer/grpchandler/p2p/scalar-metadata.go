@@ -2,7 +2,6 @@ package p2p
 
 import (
 	"log"
-	"sort"
 	"sync"
 
 	"gitlab.com/tibwere/comunigo/peer"
@@ -156,17 +155,26 @@ func (m *ScalarMetadata) GetIncomingAckToBeSentCh(index int) <-chan *proto.Scala
 // all'interno della coda deu messaggi pendenti ordinandola secondo il valore del clock logico scalare
 // e ove necessario dell'identificativo del mittente
 func (m *ScalarMetadata) PushIntoPendingList(mess *proto.ScalarClockMessage) {
-	m.pendingMsg = append(m.pendingMsg, mess)
 
-	sort.Slice(m.pendingMsg, func(i, j int) bool {
+	inserted := false
+	newClock := mess.GetTimestamp()
+	newFrom := mess.GetFrom()
 
-		iClock := m.pendingMsg[i].GetTimestamp()
-		jClock := m.pendingMsg[j].GetTimestamp()
-		iFrom := m.pendingMsg[i].GetFrom()
-		jFrom := m.pendingMsg[j].GetFrom()
+	for i, curr := range m.pendingMsg {
+		currentClock := curr.GetTimestamp()
+		currentFrom := curr.GetFrom()
 
-		return iClock < jClock || (iClock == jClock && iFrom < jFrom)
-	})
+		if newClock < currentClock || (newClock == currentClock && newFrom < currentFrom) {
+			m.pendingMsg = append(m.pendingMsg, &proto.ScalarClockMessage{}) // crea spazio all'interno dello slice per aggiungere un nuovo elemento
+			copy(m.pendingMsg[i+1:], m.pendingMsg[i:])                       // shifta verso destra gli elementi dall'i-esimo in poi
+			m.pendingMsg[i] = mess                                           // inserisce il messaggio
+			inserted = true                                                  // notifica l'inserimento
+		}
+	}
+
+	if !inserted {
+		m.pendingMsg = append(m.pendingMsg, mess)
+	}
 
 	// Viene incrementato il presence counter del mittente
 	// all'interno della coda per facilitare le operazioni di consegna
