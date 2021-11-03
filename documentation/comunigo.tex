@@ -265,7 +265,71 @@ V_i[i] = V_i[i] + 1
 \end{itemize}
 \end{enumerate}
 \end{itemize}
-\section{Testing}
+
+\section{Testing \& debugging}
+Per lo sviluppo dei casi di test si è fatto uso del supporto \textit{built-in} offerto da Go, ovvero \texttt{go test}.
+
+Nel caso di \textsl{invio singolo adottando multicast totalmente ordinato} è stato simulato l'evento di send per ciascun processo connesso, attendendo tra un invio ed il successivo un tempo pari al massimo delay sperimentabile così da avere la garanzia che tutti i messaggi ricevano la medesima sequenza ordinata di messaggi
+
+Nel caso di \textsl{invio multiplo adottando multicast totalmente ordinato} è stato realizzato uno scenario analogo ove tuttavia anziché inviare l'uno dopo l'altro i processi mandano i propri messaggi in modo simultaneo mediante l'ausilio di go,routines
+
+Una volta effettuato l'invio, in entrambi i casi i processi effettuano il retrieve della lista dei messaggi consegnati per poi:
+\begin{itemize}
+\item nel caso di implmentazione tramite \textsl{sequencer} verificare che le liste ricevute siano tutte uguali;
+\item nel caso di implementazione tramite \textsl{clock logico scalare} verificare che la parte comune a tutte le liste sia uguale.
+
+Questo perché per via del meccanismo di consegna è possibile ad esempio si verifichi che:
+\begin{itemize}
+\item il processo $A$ riceva $k$ messaggi;
+\item il processo $B$ riceva $h$ messaggi;
+\item il processo $C$ riceva $l$ messaggi
+\end{itemize}
+con $l\leq h\leq k$. In questo scenario il test verifica che i primi $l$ messaggi di ciascuna lista siano equivalenti
+\end{itemize}
+
+
+Per il testing dell'algoritmo basato sull'utilizzo dei clock logici vettoriali è stato scelto di verificare l'effettivo rispetto della causalità nel modo seguente:
+\begin{enumerate}
+\item ciascun peer invia un messaggio avente come body il proprio username;
+\item attende un certo $\Delta t$;
+\item effettua il retrieve dei messaggi ricevuti;
+\item costruisce un messaggio \textit{riassuntivo} contenente l'elenco dei body ricevuti separati da \texttt{":"} (e.g \texttt{"A:B"});
+\item invia il messaggio riassuntivo,
+\item si verifica per ciascun peer che all'interno della lista dei messaggi quelli \textit{riassuntivi} sono successivi a quelli che riscontrano.
+
+Ad esempio se il messaggio riassuntivo è \texttt{"A:B"} si verifica che i messaggi \texttt{"A"} e \texttt{"B"} lo precedano in ogni lista
+\end{enumerate}
+
+Ovviamente ciò che differenzia il caso di test di invio singolo da quello di invio multiplo è la modalità di invio dei messaggi da parte dei peer:
+\begin{itemize}
+\item Nel caso \textsl{singolo} se ne invia uno alla volta
+\item Nel caso \textsl{multiplo} si fa uso di go routines per simulare il parallelismo
+\end{itemize}
+
+Per quanto riguarda il debugging, poiché l'attività di logging è stata resa persistente e quindi è possibile ispezionare nel dettaglio come agiscono i peer, è stato scelto di implementare la logica collegata al flag \texttt{verbose} semplicemente mostrando su console javascript il detaglio dei messaggi ricecvuti comprensivo di timestamp associato ad essi, come mostrato in figura \ref{fig:debug}
+
+\begin{figure}[htbp]
+\centerline{\includegraphics[width=0.4\textwidth]{figs/debug.png}}
+\caption{Implementazione del flag \texttt{verbose}}
+\label{fig:debug}
+\end{figure}
+
 \section{Modifiche necessario per il deployment su cluster reali}
+Nel momento in cui si volesse deployare questa applicazione distribuita su un cluster di nodi (e.g. mediante l'ausilio di Kubernetes o di istanze EC2) ovviamente non sarebbe idoneo utilizzare un unica istanza attiva di Redis poiché si perderebbe il vantaggio della decentralizzazione degli algoritmi tornando ad avere un SPOF.
+
+Lo scenario ideale di deployment sarebbe dunque quello in cui su ciascun nodo fosse presente un istanza di peer e una di redis, avendo dunque un'architettura come quella riportata in figura \ref{fig:architecture-real}.
+
+Avere la configurazione dei peer non hardcoded all'interno del sorgente, bensì facilmente modificabile tramite:
+\begin{itemize}
+\item il file \texttt{\$COMUNIGO\_PATH/build/comunigo.cfg};
+\item i parametri passati da linea di comando allo script di startup
+\end{itemize}
+permette di realizzare il porting a quest'architettura più realistica in modo semplice senza che sia necessario modificare in modo massivo il codice.
+
+\begin{figure}[htbp]
+\centerline{\includegraphics[width=0.4\textwidth]{figs/architecture-real.png}}
+\caption{Possibile architettura su deployment reale}
+\label{fig:architecture-real}
+\end{figure}
 
 \end{document}
