@@ -22,7 +22,7 @@ as you can see running `bash builder.bash -h`
 ## Installation and configuration
 Before building and running the application, you can edit the [configuration file](build/comunigo.cfg) to specify some environmental configuration settings.
 
-After that you can use [startup script](build/startup.bash) to effectively startup peers and other components of the net.
+After that you can use [startup script](build/startup.bash) to effectively startup peers and other components of the architecture.
 
 As you can see running `bash startup -h` there are a few options that permits you to further configure your experience with comuniGO, for example:
 - You have to use `-n` flag to set the number of peers to spawn
@@ -34,16 +34,16 @@ As you can see running `bash startup -h` there are a few options that permits yo
 To test appplication simply:
 1. Run the [startup script](build/startup.bash) as described above specifing which algorithm do you want to test
 2. Run the [testing script](build/test.bash) specifing:
-    - Using `-t` flag the type of service to test (`sequencer`, `scalar` or `vectorial`)
-    - Using `-m` flag the modality of the test (`single` or `multiple`)
+    - The type of service to test (`sequencer`, `scalar` or `vectorial`), using `-t` flag
+    - The modality of the test (`single` or `multiple`), Using `-m` flag 
 3. Finally, once collected results, you should shutdown components running `sh shutdown.sh`
 
 ## Usage
 To use application simply follow one of this approach:
 - Run [discovery script](build/discover.sh) to get links for peers' frontend
-- Clone this [repository](https://gitlab.com/tibwere/comunigo-peer-discovery) and follow instructions inside the README file
+- Clone this [repository](https://gitlab.com/tibwere/comunigo-peer-discovery) and follow instructions inside the README file to achieve the same result
 
-Finally, you should shutdown components running `sh shutdown.sh`
+Enjoy comunication using comuniGO app and finally, you should shutdown components running `sh shutdown.sh`
 
 ## Compile documentation
 To compile the documentation, first you need to `cd` into documentation folder and then run whatever tool you want for compiling `.tex` files (e.g. `pdflatex`, `latexmk`, ...)
