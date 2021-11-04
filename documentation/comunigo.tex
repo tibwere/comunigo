@@ -13,8 +13,7 @@
 
 \author{\IEEEauthorblockN{Simone Tiberi}
 \IEEEauthorblockA{\textit{Corso di "Sistemi Distribuiti e Cloud Computing"} \\
-\textit{Università degli Studi di Roma Tor Vergata, facoltà di Ingegneria Informatica}\\
-Roma, Italia \\
+\textit{Università degli Studi di Roma Tor Vergata, Facoltà di Ingegneria Informatica}\\
 simone.tiberi.98@gmail.com}
 }
 
@@ -22,7 +21,7 @@ simone.tiberi.98@gmail.com}
 \maketitle
 
 \begin{abstract}
-L'obiettivo di questo documento è quello di analizzare e descrivere la metodologia adottata nelle varie fasi dello sviluppo del progetto, ponendo particolare enfasi sull'architettura adottata e sulle scelte implementative effettuate. 
+L'obiettivo di questo documento è quello di analizzare e descrivere la metodologia adottata nelle varie fasi dello sviluppo del progetto, ponendo particolare enfasi sull'architettura realizzata e sulle scelte implementative effettuate. 
 \end{abstract}
 
 \section{Introduzione}
@@ -34,7 +33,7 @@ L'obiettivo di questo documento è quello di analizzare e descrivere la metodolo
 \label{fig:home}
 \end{figure}
 
-L'applicazione soddisfa i requisiti richiesti dalla traccia, ovvero:
+L'applicazione:
 \begin{itemize}
 \item prevede un servizio di registrazione per i peer che vogliono partecipare al gruppo di multicast, assumendo che la membership sia statica durante l'esecuzione;
 
@@ -50,11 +49,10 @@ L'applicazione soddisfa i requisiti richiesti dalla traccia, ovvero:
 
 Inoltre, come richiesto dalla specifica, è stato testato il funzionamento degli algoritmi implementati nel caso in cui:
 \begin{itemize}
-\item vi sia un solo processo che invia il messaggio di multicast
-\item molteplici processi contemporaneamente inviino un
-messaggio di multicast;
+\item vi sia un solo processo che invii il messaggio di multicast;
+\item molteplici processi contemporaneamente inviino un messaggio di multicast.
 \end{itemize}
-e per simulare condizioni di maggiore stress nel testing è stato incluso, come consigliato, un parametro \textit{delay} configurabile che permette di specificare un ritardo nell'invio generato in modo random in un intervallo predefinito.
+Per simulare condizioni di maggiore stress nel testing è stato incluso, come consigliato, un parametro \textit{delay} configurabile, che permette di specificare un ritardo nell'invio generato in modo random in un intervallo predefinito.
 
 Per facilitare il debugging dell'applicazione, come suggerito dalla traccia, è stato implementato un flag di tipo \textit{verbose} che, se attivo, abilita la stampa di informazioni di logging con i dettagli dei messaggi inviati e ricevuti.
 
@@ -76,7 +74,7 @@ Per lo sviluppo del progetto si è fatto uso delle seguenti tecnologie:
 \label{fig:architecture}
 \end{figure}
 
-In figura \ref{fig:architecture} è riportata una schematizzazione dell'architettura adottata per lo sviluppo dell'applicazione, in cui è possibile notare come:
+In figura \ref{fig:architecture} è riportata una schematizzazione dell'architettura adottata per lo sviluppo dell'applicazione, nella quale si può notare che:
 \begin{itemize}
 \item peer, servizio di registrazione e sequencer siano ciascuno incapsulato all'interno di un container differente;
 \item a ciascun peer sono associati due volumi, uno per permettere che l'attività di logging sia persistente e l'altro per accedere agli assets web
@@ -85,10 +83,10 @@ In figura \ref{fig:architecture} è riportata una schematizzazione dell'architet
 
 \item la logica applicativa è interamente realizzata sfruttando il meccanismo RPC tra qualunque coppia di endpoint;
 
-\item l'utente finale può scambiare i propri messaggi con gli altri connessi al gruppo di multicast semplicemente utilizzando il proprio browser (o in alternativa sfruttando programmi come cURL). 
+\item l'utente finale può scambiare i propri messaggi con altri connessi al gruppo di multicast semplicemente utilizzando il proprio browser (o in alternativa sfruttando programmi come cURL). 
 \end{itemize}
 \section{Scelte progettuali}
-Di seguito è riportata una carrellata di scelte effettuate nello sviluppo della soluzione proposta.
+Di seguito è riportata una descrizione delle scelte effettuate nello sviluppo della soluzione proposta.
 
 \subsection{Uso di un frontend web per l'interazione con i peer}
 Per permettere l'interazione con i peer è stato scelto di realizzare un webserver implementato in Go sfruttando la libreria \texttt{labstack/echo}.
@@ -98,7 +96,7 @@ Le route servite sono di seguito analizzate brevemente:
 \item \texttt{[GET] /:} permette di accedere al portale di comunicazione effettivo, previa registrazione;
 \item \texttt{[GET] /list:} permette di ottenere la lista dei messaggi ricevuti in formato json;
 \item \texttt{[GET] /info:} permette di effettuare il retrieve delle informazioni necessarie a popolare l'homepage del sito;
-\item \texttt{[POST] /send:} permette di inviare un messaggio, specificando come parametro:
+\item \texttt{[POST] /send:} permette di inviare un messaggio, specificando come parametri:
 \begin{itemize}
 \item \texttt{message}: il corpo del messaggio,
 \item \texttt{delay}: l'intervallo entro cui estrarre il ritardo con cui inviare il messaggio nel formato \texttt{start:end} \textbf{da usare solo in fase di test};
@@ -106,14 +104,14 @@ Le route servite sono di seguito analizzate brevemente:
 \item \texttt{[POST] /sign:} permette di inviare il proprio username al servizio di registrazione, specificandolo come parametro (\texttt{username}).
 \end{itemize}
 
-Le risorse statiche, ovvero i file \texttt{*.html} e \texttt{*.js}, poiché non soggetti ad alcun processo di compilazione, sono state inserite all'interno del filesystem del container come volume \textit{readonly} (\texttt{assets}). Ciò permette di:
+I file \texttt{*.html} e \texttt{*.js} sono stati inseriti all'interno del filesystem del container come volume \textit{readonly} (\texttt{assets}), poiché non soggetti ad alcun processo di compilazione. Ciò permette di:
 \begin{itemize}
-\item diminuire il footprint delle immagini docker prodotte
-\item evitare di avviare la build dell'immagine del peer a seguito del cambiamento di alcuni elementi puramente grafici dell'applicazione
+\item diminuire il footprint delle immagini Docker prodotte;
+\item evitare di avviare la build dell'immagine del peer a seguito del cambiamento di alcuni elementi puramente grafici dell'applicazione.
 \end{itemize}
 
 \subsection{Uso di volumi per l'attività di logging}
-Per quanto riguarda l'attività di logging svolta dai vari componenti dell'applicazione è stato scelto di renderla persistente così da non dover avere il vincolo di lanciare i vari container in modalità \textit{attached}, tramite l'utilizzo di un volume docker dedicato.
+Per quanto riguarda l'attività di logging, svolta dai vari componenti dell'applicazione, è stato scelto di renderla persistente così da non dover avere il vincolo di lanciare i vari container in modalità \textit{attached}, tramite l'utilizzo di un volume docker dedicato.
 
 La tipologia di volume adottato è \textit{bind} per cui l'engine di docker non fa altro che montare la directory del filesystem locale \texttt{\$COMUNIGO\_PATH/logs} su \texttt{/logs} all'interno del container.
 
@@ -128,24 +126,24 @@ Il formato configurato per ciascuna riga del file di log autogenerato da \texttt
 \centerline{\scriptsize\texttt{[<time>]: method=<method>, uri=<uri>, status=<status>}}
 
 \subsection{Uso di redis per la memorizzazione dei messaggi}
-Poiché si utilizza un frontend web per interagire con l'applicazione è possibile che l'utenti aggiorni la pagina o semplicemente chiuda la tab del browser per poi riaprirla in un secondo momento.
+Poiché si utilizza un frontend web per interagire con l'applicazione, è possibile che l'utenti aggiorni la pagina o semplicemente chiuda la tab del browser per poi riaprirla in un secondo momento.
 
-In questo scenario per \textit{consegnare i messaggi al livello applicativo} non è sufficiente unicamente restituirli (e.g. classica stampa su terminale) perché altrimenti non si avrebbe la possibilità di visionarli nuovamente in un secondo momento.
+In questo scenario per \textit{consegnare i messaggi al livello applicativo} non è sufficiente unicamente restituirli (e.g. tramite una stampa su terminale) perché altrimenti non si avrebbe la possibilità di visionarli nuovamente in un secondo momento.
 
 È necessario dunque memorizzarli e, al fine di rendere quanto più possibile i container \textit{stateless}, è stato scelto di utilizzare un datastore separato.
 
 La scelta è ricaduta su Redis per diversi motivi:
 \begin{itemize}
 \item si integra in maniera ottimale con Go, infatti l'API mappa praticamente 1:1 con gli effettivi comandi nativi di Redis;
-\item essendo la membership statica non è previsto che i peer vengano spenti ed in seguito riaccesi per partecipare sempre allo stesso gruppo per cui la natura \textit{in-memory} di Redis non rappresenta un'ostacolo;
+\item essendo la membership statica, non è previsto che i peer vengano spenti ed in seguito riaccesi per partecipare sempre allo stesso gruppo, per cui la natura \textit{in-memory} di Redis non rappresenta un'ostacolo;
 \item le funzionalità \texttt{RPUSH} e \texttt{LRANGE} nativamente permettono di coprire l'intero meccanismo di salvataggio e recupero dei messaggi
 \end{itemize}
 
 \subsection{Altre scelte}
 \begin{itemize}
-\item Nella stesura del codice è stato adottato un approccio object oriented seppure Go non è un linguaggio puramente OO come ad esempio lo è Java.
+\item Nella stesura del codice è stato adottato un approccio object oriented, seppure Go non è un linguaggio puramente OO come ad esempio lo è Java.
 
-Tuttavia questo approccio ha reso possibile la stesura di un codice modulare, facilmente manutenibile ed estendibile.
+Tuttavia questo approccio ha l'obiettivo di rendere la stesura del codice modulare, facilmente manutenibile ed estendibile.
 
 \item Per l'invio dei messaggi è stato scelto di adottare connessioni TCP persistenti così da avere:
 \begin{itemize}
@@ -163,13 +161,13 @@ Tuttavia questo approccio ha reso possibile la stesura di un codice modulare, fa
 \end{itemize}
 \end{itemize}
 
-\item Per realizzare una chiusura \textit{pulita} dell'applicazione è stato utilizzato il meccanismo nativo di Go dei \textit{contesti con cancellazione} in combinazione con la cattura dei segnali di \texttt{SIGINT} e \texttt{SIGTERM} che, stando alla documentazione Docker, vengono invati da docker-compose nel momento in cui si richiede lo stop dei container
+\item Per realizzare una chiusura \textit{pulita} dell'applicazione è stato utilizzato il meccanismo nativo di Go dei \textit{contesti con cancellazione} in combinazione con la cattura dei segnali di \texttt{SIGINT} e \texttt{SIGTERM} che, stando alla documentazione Docker, vengono invati da docker-compose nel momento in cui si richiede lo stop dei container.
 
 \item Per minimizzare il footprint delle immagini Docker si è fatto uso delle \textsl{multi-stage build} che permettono di:
 \begin{enumerate}
-\item compilare gli applicativi occupando eventualmente \textit{tanta} memoria per ospitare i sorgenti necessari
+\item compilare gli applicativi occupando eventualmente \textit{tanta} memoria per ospitare i sorgenti necessari all'interno di un container \textit{worker};
 \item copiare dal \textit{worker} unicamente l'eseguibile prodotto su un nuovo container;
-\item restituire al richiedente l'immagine a footprint ridotto e contestualmente permettere l'eliminazione del worker
+\item restituire al richiedente l'immagine a footprint ridotto e contestualmente permettere l'eliminazione del worker.
 \end{enumerate}
 \end{itemize}
 
@@ -182,46 +180,46 @@ Lato frontend, la registrazione prevede che:
 \item attenda che tutti quanti i membri siano realmente connessi prima di entrare effettivamente nel portale di comunicazione.
 \end{enumerate}
 
-Lato backend invece:
+Lato backend:
 \begin{enumerate}
 \item il peer inoltra al servizio di registrazione l'username ricevuto dal frontend;
 \item le procedure remote server-side inviano quanto ricevuto dai peer ad un'apposita goroutine che mantiene la lista non ancora completa degli utenti connessi;
-\item nel momento in cui si raggiunge la taglia del gruppo prevista, la routine in questione \textit{sblocca} le procedure in attesa di poter inviare la composizione del gruppo al peer richiedente
-\item una volta ricevuto l'elendo dei peer connessi, esso viene inoltrato via HTTP al client web affichè:
+\item nel momento in cui si raggiunge la dimensione del gruppo prevista, la routine in questione \textit{sblocca} le procedure in attesa di poter inviare la composizione del gruppo al peer richiedente
+\item una volta ricevuto l'elenco dei peer connessi, esso viene inoltrato via HTTP al client web affichè:
 \begin{itemize}
 \item si effettui il redirect verso il reale portale per la comunicazione;
-\item si mostri un messaggio d'errore ove necessario
+\item si mostri un messaggio d'errore, ove necessario.
 \end{itemize}
 \end{enumerate}
 
 \subsection{Comunicazione tramite sequencer}
-Nel caso in cui la modalità di comunicazione selezionata è quella basata sull'utilizzo di un sequencer, il nodo di registrazione comunica la composizione del gruppo di multicast anche a quest'ultimo prima di terminare la sua esecuzione.
+Nel caso in cui, la modalità di comunicazione selezionata è quella basata sull'utilizzo di un sequencer, il nodo di registrazione comunica la composizione del gruppo di multicast anche a quest'ultimo prima di terminare la sua esecuzione.
 
-Una volta completata la fase di registrazione, la comunicazione tramite sequencer si basa sull'iter di seguito riportato:
+Una volta completata la fase di registrazione, la comunicazione tramite sequencer segue l'iter di seguito riportato:
 
 \begin{itemize}
 \item Nella comunicazione \textsl{dal peer al sequencer}
 \begin{enumerate}
 \item il peer inoltra al sequencer il messaggio ricevuto dal frontend; 
-\item le procedure remote server-side inviano quanto ricevuto dai peer ad un'apposita goroutine responsabile di ordinare in modo univoco i messaggi ricevuti e marcarli con un apposito timestamp (\textit{sequence number})
+\item le procedure remote server-side inviano quanto ricevuto dai peer ad un'apposita goroutine, responsabile di ordinare in modo univoco i messaggi ricevuti e marcarli con un apposito timestamp (\textit{sequence number}).
 \end{enumerate}
 
-\item Nella comunicazione \textsl{dal sequencer al peer} ogni qual volta la goroutine dedicata all'ordinamento marca un nuovo messaggio con un determinato timestamp, questo viene inoltrato sulle varie connessioni aperte in precedenza verso tutti i peer
+\item Nella comunicazione \textsl{dal sequencer al peer}, ogni qual volta la goroutine dedicata all'ordinamento marca un nuovo messaggio con un determinato timestamp, questo viene inoltrato sulle varie connessioni aperte in precedenza verso tutti i peer.
 \end{itemize}
 
 \subsection{Comunicazione basata su clock logici scalari}
-Nel caso in cui la modalità di comunicazione selezionata è quella basata sull'utilizzo del clock logico scalare, una volta completata la fase di registrazione, la comunicazione si basa sull'approccio di seguito descritto:
+Nel caso in cui la modalità di comunicazione selezionata è quella basata sull'utilizzo del clock logico scalare, una volta completata la fase di registrazione, la comunicazione si basa sull'approccio di seguito descritto.
 
 \begin{itemize}
-\item per l'\textsl{invio degli update} una goroutine ad hoc:
+\item Per l'\textsl{invio degli update}, una goroutine ad hoc:
 \begin{enumerate}
 \item preleva quanto inserito dall'utente tramite il frontend come corpo del messaggio;
-\item appone al messaggio il proprio timestamp incrementato di una unità
-\item inoltra il messaggio sulle varie connessioni in precedenza aperte verso i restanti partecipanti al gruppo di multicast;
+\item appone al messaggio il proprio timestamp incrementato di una unità;
+\item inoltra il messaggio sulle varie connessioni in precedenza aperte verso i restanti partecipanti al gruppo di multicast.
 \end{enumerate}
 
 
-\item alla \textsl{ricezione degli update}, il peer:
+\item Alla \textsl{ricezione degli update}, il peer:
 \begin{enumerate}
 \item aggiorna il proprio clock, ponendolo pari a:
 \begin{equation}
@@ -229,7 +227,7 @@ L = \max\lbrace L, t \rbrace
 \end{equation}
 dove $L$ è il clock logico scalare locale del peer e $t$ quello contenuto nel messaggio ricevuto;
 \item riscontra la ricezione inviando un ack a tutti i partecipanti del gruppo;
-\item inserisce quanto ricevuto all'interno della coda dei messaggi pendenti in modo ordinato rispetto al clock logico scalare e l'identificativo del membro (\texttt{username});
+\item inserisce quanto ricevuto all'interno della coda dei messaggi pendenti, in modo ordinato rispetto al clock logico scalare e l'identificativo del membro (\texttt{username});
 \item consegna i messaggi per cui valgono le seguenti condizioni:
 \begin{itemize}
 \item sono i primi nella coda totalmente ordinata;
@@ -251,38 +249,38 @@ Essendo questo algoritmo indubbiamente il più elaborato fra i tre, di seguito �
 
 \item Viene utilizzata una mappa stringa $\to$ intero per contare gli ack ricevuti per ciascun messaggio pendente affinché il costo dell'incremento sia $O(1)$.
 
-È opportuno osservare che mantenere il contatore degli ack come metadato presente all'interno di ogni entry della lista avrebbe causato un costo per l'aggioramento, nel caso peggiore, pari a $O(n)$ per via della ricerca sequenziale, dove $n$ è pari alla taglia della coda.
+È opportuno osservare che, mantenere il contatore degli ack come metadato presente all'interno di ogni entry della lista, avrebbe causato un costo per l'aggioramento, nel caso peggiore, pari a $O(n)$ per via della ricerca sequenziale, dove $n$ è pari alla taglia della coda.
 
-\item Viene utilizzata una mappa stringa $\to$ intero per tener traccia del numero di pacchetti in coda presenti per ciascun peer connesso al gruppo di multicast.
+\item Viene utilizzata una mappa stringa $\to$ intero per tener traccia del numero di messaggi in coda presenti per ciascun peer connesso al gruppo di multicast.
 
 Questa soluzione permette di realizzare la condizione \textit{``per ogni altro membro sono presenti messaggi in coda"} con un costo $O(k)$, dove $k$ è pari al numero di peer connessi ($k-1$ accessi alla mappa ciascuno dei quali a costo $O(1)$).
 
-È opportuno osservare che nel caso in cui non fosse stata utilizzata questa struttura dati, il costo della verifica sarebbe stato pari a $O(n)$, dove $n$ è pari al numero di messaggi in coda.
+È opportuno osservare che, nel caso in cui non fosse stata utilizzata questa struttura dati, il costo della verifica sarebbe stato pari a $O(n)$, dove $n$ è pari al numero di messaggi in coda.
 
 Ovviamente in scenari reali d'utilizzo $k << n$.
 \end{itemize}
 
 \subsection{Comunicazione basata su clock logici vettoriali}
-Nel caso in cui la modalità di comunicazione selezionata è quella basata sull'utilizzo del clock logico vettoriale, una volta completata la fase di registrazione, la comunicazione si basa sull'approccio di seguito descritto:
+Nel caso in cui la modalità di comunicazione selezionata è quella basata sull'utilizzo del clock logico vettoriale, una volta completata la fase di registrazione, la comunicazione si basa sull'approccio di seguito descritto.
 \begin{itemize}
-\item per l'\textsl{invio dei messaggi} da parte del peer $i$-esimo, una goroutine ad hoc:
+\item Per l'\textsl{invio dei messaggi} da parte del peer $i$-esimo, una goroutine ad hoc:
 \begin{itemize}
 \item preleva quanto inserito dall'utente come corpo del messaggio;
 \item appone ad esso il proprio timestamp dopo averlo modificato come segue:
 \begin{equation}
 V_i[i] = V_i[i] + 1
 \end{equation}
-\item inoltra il messaggio sulle varie connessioni in precedenza aperte verso i restanti partecipanti al gruppo di multicast
-\item consegna direttamente il messaggio poiché certamente rispetta la causalità
+\item inoltra il messaggio sulle varie connessioni in precedenza aperte verso i restanti partecipanti al gruppo di multicast;
+\item consegna direttamente il messaggio poiché certamente rispetta la causalità.
 \end{itemize}
 
-\item alla \textsl{ricezione di un messaggio} proveniente dal peer $i$-esimo da parte del peer $j$-esimo :
+\item Alla \textsl{ricezione di un messaggio} proveniente dal peer $i$-esimo da parte del peer $j$-esimo :
 \begin{enumerate}
 \item si inserisce il messaggio all'interno della coda dei messaggi pendenti;
 \item si consegnano tutti i messaggi per cui valgono le seguenti condizioni:
 \begin{itemize}
-\item $t[i] = V_j[i] + 1$
-\item $t[k] \leq V_j[k]$ per ogni $k\neq i$
+\item $t[i] = V_j[i] + 1$;
+\item $t[k] \leq V_j[k]$ per ogni $k\neq i$.
 \end{itemize}
 \end{enumerate}
 \end{itemize}
@@ -290,24 +288,23 @@ V_i[i] = V_i[i] + 1
 \section{Testing \& debugging}
 Per lo sviluppo dei casi di test si è fatto uso del supporto \textit{built-in} offerto da Go, ovvero \texttt{go test}.
 
-Nel caso di \textsl{invio singolo adottando multicast totalmente ordinato} è stato simulato l'evento di send per ciascun processo connesso, attendendo tra un invio ed il successivo un tempo pari al massimo delay sperimentabile così da avere la garanzia che tutti i peer ricevano la medesima sequenza ordinata di messaggi
+Nel caso di \textsl{invio singolo adottando multicast totalmente ordinato} è stato simulato l'evento di send per ciascun processo connesso, attendendo tra un invio ed il successivo un tempo pari al massimo delay sperimentabile, così da avere la garanzia che tutti i peer ricevano la medesima sequenza ordinata di messaggi.
 
-Nel caso di \textsl{invio multiplo adottando multicast totalmente ordinato} è stato realizzato uno scenario analogo ove tuttavia, anziché inviare l'uno dopo l'altro, i processi mandano i propri messaggi in modo simultaneo mediante l'ausilio di goroutines
+Nel caso di \textsl{invio multiplo adottando multicast totalmente ordinato} è stato realizzato uno scenario analogo, ove anziché inviare l'uno dopo l'altro, i processi mandano i propri messaggi in modo simultaneo mediante l'ausilio di goroutines.
 
 Una volta effettuato l'invio, in entrambi i casi i processi effettuano il retrieve della lista dei messaggi consegnati per poi:
 \begin{itemize}
 \item nel caso di implmentazione tramite \textsl{sequencer} verificare che le liste ricevute siano tutte uguali;
 \item nel caso di implementazione tramite \textsl{clock logico scalare} verificare che la parte comune a tutte le liste sia uguale.
 
-Questo perché per via del meccanismo di consegna è possibile ad esempio si verifichi che:
+Questo perché, per via del meccanismo di consegna è possibile, ad esempio, si verifichi che:
 \begin{itemize}
 \item il processo $A$ riceva $k$ messaggi;
 \item il processo $B$ riceva $h$ messaggi;
 \item il processo $C$ riceva $l$ messaggi
 \end{itemize}
-con $l\leq h\leq k$. In questo scenario il test verifica che i primi $l$ messaggi di ciascuna lista siano equivalenti
+con $l\leq h\leq k$. In questo scenario il test verifica che i primi $l$ messaggi di ciascuna lista siano equivalenti.
 \end{itemize}
-
 
 Per il testing dell'algoritmo basato sull'utilizzo dei clock logici vettoriali è stato scelto di verificare l'effettivo rispetto della causalità nel modo seguente:
 \begin{enumerate}
@@ -316,18 +313,18 @@ Per il testing dell'algoritmo basato sull'utilizzo dei clock logici vettoriali �
 \item effettua il retrieve dei messaggi ricevuti;
 \item costruisce un messaggio \textit{riassuntivo} contenente l'elenco dei body ricevuti separati da \texttt{":"} (e.g \texttt{"A:B"});
 \item invia il messaggio riassuntivo,
-\item si verifica per ciascun peer che all'interno della lista dei messaggi quelli \textit{riassuntivi} sono successivi a quelli che riscontrano.
+\item si verifica, per ciascun peer, che all'interno della lista dei messaggi quelli \textit{riassuntivi} siano successivi a quelli che riscontrano.
 
-Ad esempio se il messaggio riassuntivo è \texttt{"A:B"} si verifica che i messaggi \texttt{"A"} e \texttt{"B"} lo precedano in ogni lista
+Ad esempio se il messaggio riassuntivo è \texttt{"A:B"} si verifica che i messaggi \texttt{"A"} e \texttt{"B"} lo precedano in ogni lista.
 \end{enumerate}
 
-Ovviamente ciò che differenzia il caso di test di invio singolo da quello di invio multiplo è la modalità di invio dei messaggi da parte dei peer:
+Ovviamente ciò che differenzia il caso di test di invio singolo da quello multiplo, è la modalità con cui ciascun peer manda i messaggi:
 \begin{itemize}
-\item Nel caso \textsl{singolo} se ne invia uno alla volta
-\item Nel caso \textsl{multiplo} si fa uso di goroutines per simulare il parallelismo
+\item nel caso \textsl{singolo} se ne invia uno alla volta;
+\item nel caso \textsl{multiplo} si fa uso di goroutines per realizzare il parallelismo.
 \end{itemize}
 
-Per quanto riguarda il debugging, poiché l'attività di logging è stata resa persistente e quindi è possibile ispezionare nel dettaglio come agiscono i peer, è stato scelto di implementare la logica collegata al flag \texttt{verbose} semplicemente mostrando su console javascript il detaglio dei messaggi ricecvuti comprensivo di timestamp associato ad essi, come mostrato in figura \ref{fig:debug}
+Per quanto riguarda il debugging, poiché l'attività di logging è stata resa persistente e quindi è possibile ispezionare nel dettaglio come agiscono i peer, è stato scelto di implementare la logica collegata al flag \texttt{verbose} semplicemente mostrando su console javascript il dettaglio dei messaggi ricevuti, comprensivo di timestamp associato ad essi, come mostrato in figura \ref{fig:debug}
 
 \begin{figure}[htbp]
 \centerline{\includegraphics[width=0.4\textwidth]{figs/debug.png}}
@@ -335,17 +332,19 @@ Per quanto riguarda il debugging, poiché l'attività di logging è stata resa p
 \label{fig:debug}
 \end{figure}
 
-\section{Modifiche necessario per il deployment su cluster reali}
-Nel momento in cui si volesse deployare questa applicazione distribuita su un cluster di nodi (e.g. mediante l'ausilio di Kubernetes o di istanze EC2) ovviamente non sarebbe idoneo utilizzare un unica istanza attiva di Redis poiché si perderebbe il vantaggio della decentralizzazione degli algoritmi tornando ad avere un SPOF.
+\section{Modifiche necessarie per il deployment su cluster reali}
+Nel momento in cui si volesse deployare questa applicazione distribuita su un cluster di nodi (e.g. mediante l'ausilio di Kubernetes o di istanze EC2) ovviamente non sarebbe idoneo utilizzare un'unica istanza attiva di Redis, poiché si perderebbe il vantaggio della decentralizzazione degli algoritmi tornando ad avere un SPOF.
 
-Lo scenario ideale di deployment sarebbe dunque quello in cui su ciascun nodo fosse presente un istanza di peer e una di Redis, avendo dunque un'architettura come quella riportata in figura \ref{fig:architecture-real} che rispetta il pattern \textit{database-per-service}.
+Lo scenario ideale di deployment sarebbe, dunque, quello in cui su ciascun nodo fosse presente un'istanza di peer e una di Redis, avendo così un'architettura come quella riportata in figura \ref{fig:architecture-real}, che rispetta inoltre il pattern \textit{database-per-service}.
 
-Avere la configurazione dei peer non hardcoded all'interno del sorgente, bensì facilmente modificabile tramite:
+Avere la configurazione dei peer non hardcoded nel sorgente, permette di realizzare il porting a quest'architettura più realistica, in modo semplice senza che sia necessario cambiare massivamente il codice.
+
+Per modificare la configurazione, in definitiva è possibile:
 \begin{itemize}
-\item il file \texttt{\$COMUNIGO\_PATH/build/comunigo.cfg};
-\item i parametri passati da linea di comando allo script di startup
+\item editare il file \texttt{comunigo.cfg}, all'interno della directory di \texttt{build};
+\item utilizzare i parametri passati da linea di comando allo script di startup;
 \end{itemize}
-permette di realizzare il porting a quest'architettura più realistica in modo semplice senza che sia necessario modificare in modo massivo il codice.
+
 
 \begin{figure}[htbp]
 \centerline{\includegraphics[width=0.4\textwidth]{figs/architecture-real.png}}
