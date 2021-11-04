@@ -45,8 +45,10 @@ To use application simply follow one of this approach:
 
 Enjoy comunication using comuniGO app and finally shutdown components running `sh shutdown.sh`
 
-## Compile documentation
-To compile the documentation, first you need to `cd` into documentation folder and then run whatever tool you want for compiling `.tex` files (e.g. `pdflatex`, `latexmk`, ...)
+## Documentation
+The project report is already available in the repository root (file: `comunigo.pdf`).
+
+Anyway if you want to compile it again, first you need to `cd` into documentation folder and then run whatever tool you want for compiling `.tex` files (e.g. `pdflatex`, `latexmk`, ...)
 
 For instance:
 - Using `latexmk` you can run `latexmk -pdf -silent comunigo.tex`
