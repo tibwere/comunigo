@@ -43,7 +43,7 @@ To use application simply follow one of this approach:
 - Run [discovery script](build/discover.sh) to get links for peers' frontend
 - Clone this [repository](https://gitlab.com/tibwere/comunigo-peer-discovery) and follow instructions inside the README file to achieve the same result
 
-Enjoy comunication using comuniGO app and finally, you should shutdown components running `sh shutdown.sh`
+Enjoy comunication using comuniGO app and finally shutdown components running `sh shutdown.sh`
 
 ## Compile documentation
 To compile the documentation, first you need to `cd` into documentation folder and then run whatever tool you want for compiling `.tex` files (e.g. `pdflatex`, `latexmk`, ...)
