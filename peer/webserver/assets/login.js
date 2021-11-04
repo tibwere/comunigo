@@ -1,6 +1,5 @@
-function signSuccessHandler(response) {
-    if (response.Status == "ERROR") {
-        $("#errorMsg").html(response.Message)
+function showErrorMessage(mess) {
+    $("#errorMsg").html(mess)
         $("#errorMsg").fadeIn()
 
         $("#signBtn").empty()
@@ -10,18 +9,18 @@ function signSuccessHandler(response) {
         setTimeout(function(){
             $("#errorMsg").fadeOut()
         }, 1500)
+}
+
+function signSuccessHandler(response) {
+    if (response.Status == "ERROR") {
+        showErrorMessage(response.Message)
     } else {
         window.location = "index.html"
     }
 }
 
 function badRequestHandler(response) {
-    $("#errorMsg").html("You are already logged in")
-    $("#errorMsg").fadeIn()
-
-    setTimeout(function(){
-        window.location = "index.html"
-    }, 1500)
+    showErrorMessage("You are already logged in (or you're waiting for others to start chatting)")
 }
 
 $("#signform").submit(function (e) { 

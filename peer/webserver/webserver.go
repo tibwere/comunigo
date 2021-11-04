@@ -31,21 +31,23 @@ const (
 
 // In ottica OO, oggetto che rappresenta il webserver
 type WebServer struct {
-	port          uint16
-	chatGroupSize uint16
-	tos           utilities.TypeOfService
-	peerStatus    *peer.Status
-	verbose       bool
+	port           uint16
+	chatGroupSize  uint16
+	wipSignRequest bool
+	tos            utilities.TypeOfService
+	peerStatus     *peer.Status
+	verbose        bool
 }
 
 // "Costruttore" dell'oggetto WebServer
 func New(exposedPort uint16, size uint16, tos utilities.TypeOfService, verbose bool, status *peer.Status) *WebServer {
 	return &WebServer{
-		port:          exposedPort,
-		chatGroupSize: size,
-		tos:           tos,
-		peerStatus:    status,
-		verbose:       verbose,
+		port:           exposedPort,
+		chatGroupSize:  size,
+		wipSignRequest: false,
+		tos:            tos,
+		peerStatus:     status,
+		verbose:        verbose,
 	}
 }
 
@@ -153,15 +155,18 @@ func (ws *WebServer) mainPageHandler(c echo.Context) error {
 
 // "Metodo della classe WebServer" handler della route "/sign"
 func (ws *WebServer) signNewUserHandler(c echo.Context) error {
-	if ws.peerStatus.NotYetSigned() {
+	if ws.peerStatus.NotYetSigned() && !ws.wipSignRequest {
+		ws.wipSignRequest = true
 		ws.peerStatus.PushIntoFrontendBackendChannel(c.FormValue("username"))
 
 		result := <-ws.peerStatus.GetFromFrontendBackendChannel()
 		if result == "SUCCESS" {
+			ws.wipSignRequest = false
 			return c.JSON(http.StatusOK, map[string]interface{}{
 				"Status": result,
 			})
 		} else {
+			ws.wipSignRequest = false
 			return c.JSON(http.StatusOK, map[string]interface{}{
 				"Status":  "ERROR",
 				"Message": "Username already in use, please retry with another one!",
@@ -169,6 +174,7 @@ func (ws *WebServer) signNewUserHandler(c echo.Context) error {
 		}
 
 	} else {
+		ws.wipSignRequest = false
 		return c.NoContent(http.StatusBadRequest)
 	}
 }
