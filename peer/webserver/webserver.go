@@ -169,7 +169,7 @@ func (ws *WebServer) signNewUserHandler(c echo.Context) error {
 		}
 
 	} else {
-		return c.NoContent(http.StatusForbidden)
+		return c.NoContent(http.StatusBadRequest)
 	}
 }
 
@@ -178,10 +178,16 @@ func (ws *WebServer) sendMessageHandler(c echo.Context) error {
 	if ws.peerStatus.NotYetSigned() {
 		return c.NoContent(http.StatusForbidden)
 	} else {
+
+		message := c.FormValue("message")
+		if message == "" {
+			return c.NoContent(http.StatusBadRequest)
+		}
+
 		if delayStr := c.FormValue("delay"); delayStr != "" {
 			waitBeforeSend(delayStr)
 		}
-		ws.peerStatus.PushIntoFrontendBackendChannel(c.FormValue("message"))
+		ws.peerStatus.PushIntoFrontendBackendChannel(message)
 		return c.NoContent(http.StatusOK)
 	}
 }
