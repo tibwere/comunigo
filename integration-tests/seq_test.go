@@ -25,6 +25,12 @@ func sendSequencer(t *testing.T, parallel bool) {
 		t.Fatalf("Unable to sign test peers (%v)", err)
 	}
 
+	if parallel {
+		t.Log("Sending all messages")
+	} else {
+		t.Log("Sending all messages (it's gonna take a while ...)")
+	}
+
 	err = SendMessages(users, parallel, START_DELAY_INTERVAL, END_DELAY_INTERVAL)
 	if err != nil {
 		t.Fatalf("Unable to send messages (%v)", err)
